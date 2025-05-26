@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drone Rescue: Sky Guardian - Prototype</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div id="gameUI">
+            <div id="topBar">
+                <div class="status-item">
+                    <span class="label">バッテリー:</span>
+                    <div class="progress-bar">
+                        <div id="batteryBar" class="progress-fill battery"></div>
+                    </div>
+                    <span id="batteryText">100%</span>
+                    <span id="drainRateText" class="drain-rate">(-0.2%/s)</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">収容人数:</span>
+                    <span id="capacityText">0/5</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">救助人数:</span>
+                    <span id="rescuedText">0</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">残り時間:</span>
+                    <span id="timeText">3:00</span>
+                </div>
+                <div class="status-item upgrade-icon" id="upgradeIcon" title="アップグレード進捗">
+                    <span>⚙️</span>
+                </div>
+            </div>
+            <div id="startScreen" class="screen">
+                <h1>Drone Rescue: Sky Guardian</h1>
+                <p>プロトタイプ版</p>
+                <button id="startButton" class="button">ゲーム開始</button>
+                <div class="instructions">
+                    <h3>操作方法</h3>
+                    <ul>
+                        <li>↑↓ または W/S: 上昇・下降</li>
+                        <li>←→ または A/D: 左右移動</li>
+                        <li>スペース: 救助/投下</li>
+                    </ul>
+                </div>
+            </div>
+            <div id="gameOverScreen" class="screen hidden">
+                <h2>ミッション完了！</h2>
+                <p id="finalScore"></p>
+                <button id="restartButton" class="button">もう一度プレイ</button>
+            </div>
+            
+            <!-- Upgrade Selection Modal -->
+            <div id="upgradeModal" class="modal hidden">
+                <div class="modal-content">
+                    <h2>パワーアップを選択</h2>
+                    <div class="reward-info">
+                        <p>報酬: $<span id="rewardAmount">0</span></p>
+                        <p>現在の資金: $<span id="currentMoney">0</span></p>
+                    </div>
+                    <div id="upgradeChoices" class="upgrade-choices">
+                        <!-- Upgrade cards will be inserted here -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Upgrade Progress Modal -->
+            <div id="upgradeProgressModal" class="modal hidden">
+                <div class="modal-content">
+                    <h2>アップグレード進捗</h2>
+                    <div class="upgrade-list" id="upgradeList">
+                        <!-- Upgrade progress items will be inserted here -->
+                    </div>
+                    <button class="close-btn" id="closeProgressBtn">閉じる</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="js/upgrades.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/drone.js"></script>
+    <script src="js/citizen.js"></script>
+    <script src="js/stage.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
