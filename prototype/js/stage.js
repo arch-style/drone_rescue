@@ -1,46 +1,107 @@
 class Stage {
-    constructor(width, height) {
+    constructor(width, height, stageNumber = 1) {
         this.width = width;
         this.height = height;
+        this.stageNumber = stageNumber;
         
         // 地形データ
         this.groundLevel = height - 100;
         
-        // 建物データ（ワールド全体に分散）
-        this.buildings = [
-            { x: 350, y: this.groundLevel, width: 100, height: 150 },
-            { x: 550, y: this.groundLevel, width: 120, height: 200 },
-            { x: 800, y: this.groundLevel, width: 80, height: 120 },
-            { x: 1000, y: this.groundLevel, width: 100, height: 160 },
-            { x: 1200, y: this.groundLevel, width: 150, height: 180 },
-            { x: 1400, y: this.groundLevel, width: 100, height: 140 }
-        ];
-        
-        // 基地の位置
-        this.baseX = 50;
+        // 基地の位置（中央付近に配置）
+        this.baseX = width / 2 - 50;
         this.baseY = this.groundLevel;
         this.baseWidth = 100;
         this.baseHeight = 80;
         
-        // 雲のデータ
-        this.clouds = [
-            { x: 200, y: 100, width: 80, height: 40, speed: 20 },
-            { x: 500, y: 150, width: 100, height: 50, speed: 15 },
-            { x: 800, y: 80, width: 90, height: 45, speed: 25 }
-        ];
+        // 建物データを動的に生成
+        this.buildings = this.generateBuildings();
         
-        // 充電ポート（1つのみ）
-        this.chargingPort = {
-            x: 550,
-            y: this.groundLevel,
-            width: 60,
-            height: 40,
-            used: false,
-            chargeAmount: 25 // ステージごとに固定値
-        };
+        // 雲のデータを動的に生成
+        this.clouds = this.generateClouds();
+        
+        // 充電ポート（ランダムな位置に配置）
+        const portSide = Math.random() < 0.5 ? 'left' : 'right';
+        const portRange = width * 0.3; // ホームポイントから30%の範囲
+        
+        if (portSide === 'left') {
+            this.chargingPort = {
+                x: Math.random() * (this.baseX - portRange - 100) + 100,
+                y: this.groundLevel,
+                width: 60,
+                height: 40,
+                used: false,
+                chargeAmount: 25
+            };
+        } else {
+            this.chargingPort = {
+                x: Math.random() * (width - this.baseX - this.baseWidth - portRange - 100) + this.baseX + this.baseWidth + portRange,
+                y: this.groundLevel,
+                width: 60,
+                height: 40,
+                used: false,
+                chargeAmount: 25
+            };
+        }
         
         // 背景のグラデーション用
         this.skyGradient = null;
+    }
+    
+    generateBuildings() {
+        const buildings = [];
+        const buildingCount = 8 + this.stageNumber * 2; // ステージごとに建物増加
+        
+        // ホームポイントの左右に建物を配置
+        for (let i = 0; i < buildingCount; i++) {
+            let x, attempts = 0;
+            let validPosition = false;
+            
+            while (!validPosition && attempts < 50) {
+                x = Math.random() * (this.width - 150) + 50;
+                
+                // ホームポイントとの距離をチェック
+                if (Math.abs(x - this.baseX) > 200) {
+                    validPosition = true;
+                    
+                    // 他の建物との重なりをチェック
+                    for (const building of buildings) {
+                        if (Math.abs(x - building.x) < 150) {
+                            validPosition = false;
+                            break;
+                        }
+                    }
+                }
+                attempts++;
+            }
+            
+            if (validPosition) {
+                buildings.push({
+                    x: x,
+                    y: this.groundLevel,
+                    width: 80 + Math.random() * 70,
+                    height: 120 + Math.random() * 100
+                });
+            }
+        }
+        
+        return buildings;
+    }
+    
+    generateClouds() {
+        const clouds = [];
+        const cloudCount = 3 + Math.floor(this.stageNumber / 2);
+        
+        for (let i = 0; i < cloudCount; i++) {
+            clouds.push({
+                x: Math.random() * this.width,
+                y: 50 + Math.random() * 150,
+                width: 60 + Math.random() * 60,
+                height: 30 + Math.random() * 30,
+                speed: 10 + Math.random() * 20
+            });
+        }
+        
+        return clouds;
     }
     
     update(deltaTime) {

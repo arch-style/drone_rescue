@@ -9,13 +9,13 @@ class Drone {
         // ドローンの仕様
         this.width = 40;
         this.height = 20;
-        this.maxSpeed = 350;
-        this.acceleration = 500;
+        this.maxSpeed = 700; // 350 * 2 = 700
+        this.acceleration = 1000; // 500 * 2 = 1000
         this.friction = 0.92;
         
         // リソース
         this.battery = 100;
-        this.batteryDrainBase = 0.2; // ホバリング時の基本消費率/秒
+        this.batteryDrainBase = 0.4; // ホバリング時の基本消費率/秒（倍増）
         this.currentDrainRate = 0; // 現在の消費率（表示用）
         this.maxCapacity = 5;
         this.passengers = [];
@@ -28,9 +28,12 @@ class Drone {
         this.facing = 1; // 1: 右向き, -1: 左向き
         this.isRescuing = false;
         this.ropeLength = 0;
-        this.maxRopeLength = 75;
+        this.maxRopeLength = 20; // 初期長さは20px
         this.isCrashing = false;
         this.crashY = 0;
+        
+        // ワールドサイズ（後から設定される）
+        this.worldWidth = 1600;
         
         // バッテリー消費表示
         this.showBatteryConsumption = false;
@@ -57,8 +60,24 @@ class Drone {
         // バッテリー消費計算
         const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
         const speedRatio = speed / this.maxSpeed;
-        const passengerPenalty = 1 + (this.passengers.length * 0.15); // 1人につき15%増加
-        const batteryDrain = (this.batteryDrainBase + (speedRatio * 2)) * passengerPenalty;
+        
+        // 速度による消費（速度が高いほど大きく消費）
+        const speedConsumption = this.batteryDrainBase + (speedRatio * speedRatio * 6); // 二乗で加速度的に増加（倍増）
+        
+        // 上昇・下降による消費
+        let verticalConsumption = 1.0;
+        if (this.vy < 0) {
+            // 上昇時は大きく消費（現在の4倍）
+            verticalConsumption = 1.0 + Math.abs(this.vy) / this.maxSpeed * 4.0;
+        } else if (this.vy > 0) {
+            // 下降時は消費を減らす（現在の0.5倍）
+            verticalConsumption = 1.0 - Math.min(this.vy / this.maxSpeed * 0.5, 0.5);
+        }
+        
+        // 乗客数による消費（より大きく増加）
+        const passengerPenalty = 1 + (this.passengers.length * 0.6); // 1人につき60%増加（倍増）
+        
+        const batteryDrain = speedConsumption * verticalConsumption * passengerPenalty;
         
         // 現在の消費率を保存（表示用）
         this.currentDrainRate = batteryDrain;
@@ -115,7 +134,7 @@ class Drone {
         this.y += this.vy * deltaTime;
         
         // ワールド境界チェック
-        this.x = Math.max(this.width / 2, Math.min(1600 - this.width / 2, this.x));
+        this.x = Math.max(this.width / 2, Math.min(this.worldWidth - this.width / 2, this.x));
         this.y = Math.max(this.height / 2, Math.min(540, this.y));
     }
     

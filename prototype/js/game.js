@@ -6,6 +6,10 @@ class Game {
         // アップグレードシステム
         this.upgradeSystem = new UpgradeSystem();
         
+        // サウンドマネージャー
+        this.soundManager = new SoundManager();
+        this.soundManager.createSounds();
+        
         // キャンバスサイズ設定（スマホ縦画面対応）
         this.width = 360;
         this.height = 640;
@@ -17,16 +21,19 @@ class Game {
             x: 0,
             y: 0
         };
-        this.worldWidth = 1600; // ワールドの横幅
+        this.worldWidth = 1600; // ベースのワールド横幅
         
         // ゲーム状態
         this.state = 'menu'; // menu, playing, gameover, failed
         this.score = 0;
         this.rescuedCount = 0;
         this.time = 0;
-        this.timeLimit = 180; // 3分の制限時間
+        this.timeLimit = 90; // 1分30秒の制限時間
         this.lastTime = 0;
         this.failureReason = '';
+        this.currentStage = 1; // 現在のステージ番号
+        this.continueCount = 0; // コンティニュー回数
+        this.totalRescued = 0; // 総救助人数
         
         // ゲームオブジェクト
         this.drone = null;
@@ -40,23 +47,43 @@ class Game {
         // UI要素
         this.startScreen = document.getElementById('startScreen');
         this.gameOverScreen = document.getElementById('gameOverScreen');
-        this.batteryBar = document.getElementById('batteryBar');
-        this.batteryText = document.getElementById('batteryText');
-        this.drainRateText = document.getElementById('drainRateText');
+        this.failedScreen = document.getElementById('failedScreen');
+        this.batteryFill = document.getElementById('batteryFill');
+        this.batteryPercent = document.getElementById('batteryPercent');
+        this.batteryDrain = document.getElementById('batteryDrain');
         this.capacityText = document.getElementById('capacityText');
         this.rescuedText = document.getElementById('rescuedText');
         this.timeText = document.getElementById('timeText');
+        this.stageText = document.getElementById('stageText');
         
         // ボタンイベント
-        document.getElementById('startButton').addEventListener('click', () => this.startGame());
-        document.getElementById('restartButton').addEventListener('click', () => this.startGame());
+        document.getElementById('startButton').addEventListener('click', () => {
+            this.soundManager.play('click');
+            this.startGame();
+        });
+        // restartButtonは削除されたためコメントアウト
+        // document.getElementById('restartButton').addEventListener('click', () => {
+        //     this.soundManager.play('click');
+        //     this.startGame();
+        // });
+        document.getElementById('continueButton').addEventListener('click', () => {
+            this.soundManager.play('click');
+            this.continueGame();
+        });
+        document.getElementById('titleButton').addEventListener('click', () => {
+            this.soundManager.play('click');
+            this.returnToTitle();
+        });
         
         // アップグレード画面のイベント
         const upgradeIcon = document.getElementById('upgradeIcon');
         const closeProgressBtn = document.getElementById('closeProgressBtn');
         
         if (upgradeIcon) {
-            upgradeIcon.addEventListener('click', () => this.showUpgradeProgress());
+            upgradeIcon.addEventListener('click', () => {
+                this.soundManager.play('click');
+                this.showUpgradeProgress();
+            });
         }
         
         if (closeProgressBtn) {
@@ -92,48 +119,90 @@ class Game {
         this.score = 0;
         this.rescuedCount = 0;
         this.time = 0;
+        this.continueCount = 0; // ステージ開始時にリセット
         
         // UI更新
         this.startScreen.classList.add('hidden');
         this.gameOverScreen.classList.add('hidden');
+        this.failedScreen.classList.add('hidden');
+        
+        // BGM開始（既に再生中の場合は停止してから再開始）
+        this.soundManager.stopBGM();
+        this.soundManager.playBGM();
         
         // ゲームオブジェクト初期化
         this.initializeGame();
     }
     
     initializeGame() {
+        // ステージに応じてワールドサイズを拡大
+        this.worldWidth = 1600 + (this.currentStage - 1) * 400; // ステージごとに400px拡大
+        
+        // ステージ初期化（ワールドサイズを渡す）
+        this.stage = new Stage(this.worldWidth, this.height, this.currentStage);
+        
         // ドローン初期化 (基地の近くに配置)
-        this.drone = new Drone(150, 300);
+        this.drone = new Drone(this.stage.baseX + this.stage.baseWidth/2, 300);
+        this.drone.worldWidth = this.worldWidth; // ドローンにワールドサイズを設定
         
         // アップグレードを適用
         this.upgradeSystem.applyUpgrades(this.drone, this);
         
-        // ステージ初期化（ワールドサイズを渡す）
-        this.stage = new Stage(this.worldWidth, this.height);
-        
-        // 充電ポートの充電量を固定値に設定（ステージ1は25%）
-        this.stage.chargingPort.chargeAmount = 25;
+        // 充電ポートの充電量をステージに応じて設定
+        const baseChargeAmount = 30 - Math.min(this.currentStage * 2, 20); // ステージが進むほど充電量が減る
+        this.stage.chargingPort.chargeAmount = baseChargeAmount;
         this.stage.chargingPort.used = false;
         
-        // 市民配置
+        // 市民配置（ランダム生成）
         this.citizens = [];
-        const citizenPositions = [
-            { x: 300, y: this.stage.groundLevel, type: 'ground' },
-            { x: 700, y: this.stage.groundLevel, type: 'ground' },
-            { x: 1100, y: this.stage.groundLevel, type: 'ground' },
-            { x: 400, y: this.stage.buildings[0].y - this.stage.buildings[0].height, type: 'roof', buildingIndex: 0 },
-            { x: 610, y: this.stage.buildings[1].y - this.stage.buildings[1].height, type: 'roof', buildingIndex: 1 },
-            { x: 840, y: this.stage.buildings[2].y - this.stage.buildings[2].height, type: 'roof', buildingIndex: 2 },
-            { x: 1050, y: this.stage.buildings[3].y - this.stage.buildings[3].height, type: 'roof', buildingIndex: 3 },
-            { x: 1275, y: this.stage.buildings[4].y - this.stage.buildings[4].height, type: 'roof', buildingIndex: 4 }
-        ];
+        this.generateCitizens();
+    }
+    
+    generateCitizens() {
+        // 救助者数（ステージが進むと増えるが、最初は5人）
+        const citizenCount = Math.min(5 + Math.floor((this.currentStage - 1) / 2), 10);
         
-        citizenPositions.forEach(pos => {
-            const citizen = new Citizen(pos.x, pos.y);
-            citizen.type = pos.type;
-            citizen.buildingIndex = pos.buildingIndex;
+        // 地上と屋上の比率
+        const roofRatio = Math.min(0.3 + (this.currentStage - 1) * 0.1, 0.7);
+        const roofCount = Math.floor(citizenCount * roofRatio);
+        const groundCount = citizenCount - roofCount;
+        
+        // ホームポイントの位置
+        const homeX = this.stage.baseX + this.stage.baseWidth / 2;
+        
+        // 地上の市民を配置
+        for (let i = 0; i < groundCount; i++) {
+            // ホームポイントの左右にランダムに配置
+            let x;
+            if (Math.random() < 0.3) {
+                // 30%の確率でホームポイントの左側
+                x = Math.random() * (homeX - 100) + 50;
+            } else {
+                // 70%の確率でホームポイントの右側
+                x = Math.random() * (this.worldWidth - homeX - 100) + homeX + 50;
+            }
+            
+            const citizen = new Citizen(x, this.stage.groundLevel);
+            citizen.type = 'ground';
             this.citizens.push(citizen);
-        });
+        }
+        
+        // 屋上の市民を配置
+        const availableBuildings = [...this.stage.buildings];
+        for (let i = 0; i < roofCount && availableBuildings.length > 0; i++) {
+            const buildingIndex = Math.floor(Math.random() * availableBuildings.length);
+            const building = availableBuildings.splice(buildingIndex, 1)[0];
+            const originalIndex = this.stage.buildings.indexOf(building);
+            
+            // 建物の上にランダムな位置で配置
+            const x = building.x + Math.random() * (building.width - 20) + 10;
+            const y = building.y - building.height;
+            
+            const citizen = new Citizen(x, y);
+            citizen.type = 'roof';
+            citizen.buildingIndex = originalIndex;
+            this.citizens.push(citizen);
+        }
     }
     
     handleRescueAction() {
@@ -141,13 +210,14 @@ class Game {
         
         // ロープ救助の開始/停止
         if (!this.drone.isRescuing) {
-            // 縄梯子を出す時のバッテリー消費（アップグレード効果を適用）
+            // ハシゴを出す時のバッテリー消費（アップグレード効果を適用）
             const ropeConsumption = 3 * Math.pow(this.upgradeSystem.effectMultipliers.ropeBatteryEfficiency, this.upgradeSystem.levels.ropeBatteryEfficiency);
             this.drone.battery = Math.max(0, this.drone.battery - ropeConsumption);
             this.drone.consumptionAmount = ropeConsumption; // 表示用
             this.drone.showRopeConsumption(); // 消費表示
             this.drone.isRescuing = true;
             this.drone.ropeLength = 0;
+            this.soundManager.play('rope');
         } else {
             this.drone.isRescuing = false;
             this.drone.ropeLength = 0;
@@ -181,6 +251,7 @@ class Game {
         citizen.rescued = true;
         this.drone.passengers.push(citizen);
         citizen.boardDrone(this.drone);
+        this.soundManager.play('rescue');
     }
     
     isNearBase() {
@@ -192,7 +263,7 @@ class Game {
     
     isAboveBase() {
         if (!this.stage || !this.drone) return false;
-        return this.isNearBase() && this.drone.y < this.stage.groundLevel - 50;
+        return this.isNearBase() && this.drone.y < this.stage.groundLevel - 10; // 高度判定を大幅に緩和
     }
     
     dropOffPassengers() {
@@ -202,7 +273,9 @@ class Game {
         });
         this.drone.passengers = [];
         this.rescuedCount += droppedCount;
+        this.totalRescued += droppedCount; // 総救助人数を更新
         this.score += droppedCount * 100;
+        this.soundManager.play('dropOff');
     }
     
     update(deltaTime) {
@@ -244,7 +317,7 @@ class Game {
                             );
                             if (distance < 30) {
                                 this.rescueCitizen(citizen);
-                                // 救助後、縄梯子を自動収納
+                                // 救助後、ハシゴを自動収納
                                 this.drone.isRescuing = false;
                                 this.drone.ropeLength = 0;
                             }
@@ -254,7 +327,7 @@ class Game {
                 
                 // ホームポイント上空で乗客がいる場合、降下処理
                 if (this.isAboveBase() && this.drone.passengers.length > 0) {
-                    // 縄梯子が基地に届いたら降下
+                    // ハシゴが基地に届いたら降下
                     const ropeEndY = this.drone.y + this.drone.height/2 + this.drone.ropeLength;
                     if (ropeEndY >= this.stage.groundLevel - 10) {
                         this.dropOffPassengers();
@@ -277,6 +350,7 @@ class Game {
                     if (distanceToPort < 40 && this.drone.isNearGround()) {
                         this.drone.battery = Math.min(100, this.drone.battery + port.chargeAmount);
                         port.used = true; // 使用済みにする
+                        this.soundManager.play('charge');
                     }
                 }
             }
@@ -285,11 +359,14 @@ class Game {
             if (this.drone.battery <= 0 && !this.drone.isCrashing) {
                 this.drone.startCrash();
                 this.failureReason = 'バッテリー切れで墜落しました';
+                this.soundManager.play('crash');
             }
             
             // 墜落チェック
             if (this.drone.isCrashing && this.drone.y > this.stage.groundLevel) {
                 this.state = 'failed';
+                this.soundManager.stopBGM();
+                this.gameOver();
             }
         }
         
@@ -297,6 +374,8 @@ class Game {
         if (this.timeLimit - this.time <= 0) {
             this.state = 'failed';
             this.failureReason = '制限時間を超過しました';
+            this.soundManager.stopBGM();
+            this.gameOver();
         }
         
         // 市民更新
@@ -316,23 +395,35 @@ class Game {
     updateUI() {
         // バッテリー
         const batteryPercent = Math.max(0, this.drone.battery);
-        this.batteryBar.style.width = batteryPercent + '%';
-        this.batteryText.textContent = Math.floor(batteryPercent) + '%';
+        this.batteryFill.style.width = batteryPercent + '%';
+        this.batteryPercent.textContent = Math.floor(batteryPercent) + '%';
+        
+        // バッテリー残量に応じて色を変更
+        if (batteryPercent < 20) {
+            this.batteryPercent.style.color = '#ff0000';
+        } else if (batteryPercent < 50) {
+            this.batteryPercent.style.color = '#ffaa00';
+        } else {
+            this.batteryPercent.style.color = '#ffffff';
+        }
         
         // バッテリー消費率表示
         if (this.drone) {
             const drainRate = this.drone.currentDrainRate || 0;
-            this.drainRateText.textContent = `(-${drainRate.toFixed(1)}%/s)`;
+            this.batteryDrain.textContent = `-${drainRate.toFixed(1)}%/s`;
             
             // 消費率に応じて色を変更
-            if (drainRate > 2.0) {
-                this.drainRateText.style.color = '#ff0000';
-            } else if (drainRate > 1.0) {
-                this.drainRateText.style.color = '#ffa500';
+            if (drainRate > 3.0) {
+                this.batteryDrain.style.color = '#ff0000';
+            } else if (drainRate > 1.5) {
+                this.batteryDrain.style.color = '#ffa500';
             } else {
-                this.drainRateText.style.color = '#ffd700';
+                this.batteryDrain.style.color = '#ffd700';
             }
         }
+        
+        // ステージ
+        this.stageText.textContent = this.currentStage;
         
         // 収容人数
         this.capacityText.textContent = `${this.drone.passengers.length}/${this.drone.maxCapacity}`;
@@ -407,15 +498,15 @@ class Game {
         this.ctx.font = 'bold 20px Arial';
         this.ctx.textAlign = 'center';
         
-        // 左側の表示
-        let leftY = this.height/2 - 30;
+        // 左側の表示（UIと重ならないように位置調整）
+        let leftY = 120; // 上部UIの下から開始
         if (leftCount > 0) {
             this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
             this.ctx.fillRect(10, leftY, 60, 60);
             this.ctx.fillStyle = '#FFD700';
             this.ctx.fillText('◀', 40, leftY + 30);
             this.ctx.fillText(leftCount.toString(), 40, leftY + 50);
-            leftY -= 70;
+            leftY += 70;
         }
         
         // ホームポイント（左側）
@@ -426,7 +517,7 @@ class Game {
             this.ctx.fillStyle = '#4CAF50';
             this.ctx.fillText('◀', 40, leftY + 30);
             this.ctx.fillText('H', 40, leftY + 50);
-            leftY -= 70;
+            leftY += 70;
         }
         
         // 充電ポイント（左側）
@@ -438,15 +529,15 @@ class Game {
             this.ctx.fillText('⚡', 40, leftY + 50);
         }
         
-        // 右側の表示
-        let rightY = this.height/2 - 30;
+        // 右側の表示（UIと重ならないように位置調整）
+        let rightY = 120; // 上部UIの下から開始
         if (rightCount > 0) {
             this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
             this.ctx.fillRect(this.width - 70, rightY, 60, 60);
             this.ctx.fillStyle = '#FFD700';
             this.ctx.fillText('▶', this.width - 40, rightY + 30);
             this.ctx.fillText(rightCount.toString(), this.width - 40, rightY + 50);
-            rightY -= 70;
+            rightY += 70;
         }
         
         // ホームポイント（右側）
@@ -456,7 +547,7 @@ class Game {
             this.ctx.fillStyle = '#4CAF50';
             this.ctx.fillText('▶', this.width - 40, rightY + 30);
             this.ctx.fillText('H', this.width - 40, rightY + 50);
-            rightY -= 70;
+            rightY += 70;
         }
         
         // 充電ポイント（右側）
@@ -492,7 +583,7 @@ class Game {
             this.ctx.fillStyle = '#FFFFFF';
             this.ctx.font = 'bold 16px Arial';
             this.ctx.textAlign = 'center';
-            this.ctx.fillText('スペースで降下', 0, 5);
+            this.ctx.fillText('ハシゴで降下', 0, 5);
             
             // 下向き矢印
             this.ctx.strokeStyle = '#FFFFFF';
@@ -512,14 +603,26 @@ class Game {
     gameOver() {
         if (this.state === 'failed') {
             // ミッション失敗
-            const h2 = this.gameOverScreen.querySelector('h2');
-            h2.textContent = 'ミッション失敗';
-            h2.style.color = '#ff0000';
+            document.getElementById('failedReason').textContent = this.failureReason;
+            const failedScoreText = `<span style="font-size: 24px; color: #ff6b6b">ステージ ${this.currentStage}</span><br><br>` +
+                                  `所持金: $${this.upgradeSystem.money}<br>` +
+                                  `総救助人数: ${this.totalRescued}人`;
+            document.getElementById('failedScore').innerHTML = failedScoreText;
             
-            const finalScoreText = `<span style="color: #ff0000">${this.failureReason}</span><br><br>` +
-                                 `救助人数: ${this.rescuedCount}/${this.citizens.length}<br>` +
-                                 `スコア: ${this.score}`;
-            document.getElementById('finalScore').innerHTML = finalScoreText;
+            // コンティニュー金額を計算（50 * 2^回数）
+            const continueCost = 50 * Math.pow(2, this.continueCount);
+            const continueBtn = document.getElementById('continueButton');
+            continueBtn.textContent = `コンティニュー ($${continueCost})`;
+            
+            // 資金不足の場合はボタンを無効化
+            if (this.upgradeSystem.money >= continueCost) {
+                continueBtn.disabled = false;
+            } else {
+                continueBtn.disabled = true;
+            }
+            
+            this.failedScreen.classList.remove('hidden');
+            return;
         } else {
             // ミッション成功
             this.state = 'gameover';
@@ -538,7 +641,8 @@ class Game {
             else if (reward >= 60) rank = 'A';
             else if (reward >= 40) rank = 'B';
             
-            const finalScoreText = `救助人数: ${this.rescuedCount}/${this.citizens.length}<br>` +
+            const finalScoreText = `<span style="font-size: 28px; color: #FFD700">ステージ ${this.currentStage} クリア！</span><br><br>` +
+                                 `救助人数: ${this.rescuedCount}/${this.citizens.length}<br>` +
                                  `クリア時間: ${Math.floor(this.time / 60)}:${Math.floor(this.time % 60).toString().padStart(2, '0')}<br>` +
                                  `バッテリー残量: ${Math.floor(this.drone.battery)}%<br>` +
                                  `<br>` +
@@ -549,14 +653,17 @@ class Game {
             // 報酬を追加
             this.upgradeSystem.money += reward;
             
-            // 3秒後にアップグレード選択を表示
-            setTimeout(() => {
-                this.showUpgradeSelection();
-            }, 3000);
+            // アップグレード選択は表示される前にゲームオーバー画面が非表示になる
         }
         
         // ゲームオーバー画面表示
         this.gameOverScreen.classList.remove('hidden');
+        
+        // 3秒後にゲームオーバー画面を非表示にしてからアップグレード選択を表示
+        setTimeout(() => {
+            this.gameOverScreen.classList.add('hidden');
+            this.showUpgradeSelection();
+        }, 3000);
     }
     
     showUpgradeSelection() {
@@ -569,11 +676,7 @@ class Game {
         
         if (!modal) return;
         
-        // 報酬と現在の資金を表示
-        const batteryPercent = this.drone.battery / 100;
-        const timePercent = (this.timeLimit - this.time) / this.timeLimit;
-        const reward = this.upgradeSystem.calculateReward(batteryPercent, timePercent);
-        rewardAmount.textContent = reward;
+        // 現在の資金のみ表示
         currentMoney.textContent = this.upgradeSystem.money;
         
         // 選択肢をクリア
@@ -626,6 +729,7 @@ class Game {
             // クリックイベント
             card.addEventListener('click', () => {
                 if (this.upgradeSystem.money >= upgrade.price) {
+                    this.soundManager.play('powerup');
                     this.purchaseUpgrade(upgrade);
                     modal.classList.add('hidden');
                     // 次のステージへ
@@ -637,6 +741,32 @@ class Game {
             
             choicesContainer.appendChild(card);
         });
+        
+        // 「何も買わない」選択肢を追加
+        const skipCard = document.createElement('div');
+        skipCard.className = 'upgrade-card';
+        
+        const skipName = document.createElement('div');
+        skipName.className = 'upgrade-name';
+        skipName.textContent = 'スキップ';
+        skipCard.appendChild(skipName);
+        
+        const skipDetails = document.createElement('div');
+        skipDetails.className = 'upgrade-details';
+        skipDetails.innerHTML = '何も買わずに次のステージへ';
+        skipCard.appendChild(skipDetails);
+        
+        const skipPrice = document.createElement('div');
+        skipPrice.innerHTML = '<span class="upgrade-price">無料</span>';
+        skipCard.appendChild(skipPrice);
+        
+        skipCard.addEventListener('click', () => {
+            this.soundManager.play('click');
+            modal.classList.add('hidden');
+            this.nextStage();
+        });
+        
+        choicesContainer.appendChild(skipCard);
         
         // モーダルを表示
         modal.classList.remove('hidden');
@@ -675,16 +805,36 @@ class Game {
             const item = document.createElement('div');
             item.className = 'upgrade-item';
             
+            // アップグレード情報コンテナ
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'upgrade-item-info';
+            
             const nameSpan = document.createElement('span');
             nameSpan.className = 'upgrade-item-name';
             nameSpan.textContent = attr.name;
+            infoDiv.appendChild(nameSpan);
+            
+            // グラフ表示
+            const graphDiv = document.createElement('div');
+            graphDiv.className = 'upgrade-item-graph';
+            
+            const barDiv = document.createElement('div');
+            barDiv.className = 'upgrade-item-bar';
+            
+            const barFill = document.createElement('div');
+            barFill.className = 'upgrade-item-bar-fill';
+            barFill.style.width = `${level * 10}%`;
+            barDiv.appendChild(barFill);
             
             const levelSpan = document.createElement('span');
             levelSpan.className = 'upgrade-item-level';
             levelSpan.textContent = `Lv ${level}/10`;
             
-            item.appendChild(nameSpan);
-            item.appendChild(levelSpan);
+            graphDiv.appendChild(barDiv);
+            graphDiv.appendChild(levelSpan);
+            infoDiv.appendChild(graphDiv);
+            
+            item.appendChild(infoDiv);
             list.appendChild(item);
         });
         
@@ -695,16 +845,21 @@ class Game {
         moneyItem.style.borderTop = '1px solid #444';
         moneyItem.style.paddingTop = '15px';
         
+        const moneyInfo = document.createElement('div');
+        moneyInfo.className = 'upgrade-item-info';
+        
         const moneyLabel = document.createElement('span');
         moneyLabel.className = 'upgrade-item-name';
         moneyLabel.textContent = '資金';
+        moneyInfo.appendChild(moneyLabel);
         
         const moneyValue = document.createElement('span');
         moneyValue.className = 'upgrade-item-level';
         moneyValue.textContent = `$${this.upgradeSystem.money}`;
         moneyValue.style.color = '#4CAF50';
+        moneyValue.style.fontSize = '18px';
         
-        moneyItem.appendChild(moneyLabel);
+        moneyItem.appendChild(moneyInfo);
         moneyItem.appendChild(moneyValue);
         list.appendChild(moneyItem);
         
@@ -718,8 +873,53 @@ class Game {
     }
     
     nextStage() {
-        // 次のステージを開始（現在は同じステージを再開）
+        // 次のステージへ進む
+        this.currentStage++;
         this.startGame();
+    }
+    
+    continueGame() {
+        // コンティニュー処理
+        const continueCost = 50 * Math.pow(2, this.continueCount);
+        
+        if (this.upgradeSystem.money >= continueCost) {
+            this.upgradeSystem.money -= continueCost;
+            this.continueCount++; // コンティニュー回数を増やす
+            this.state = 'playing';
+            this.failedScreen.classList.add('hidden');
+            
+            // ドローンを初期位置に戻す
+            this.drone.x = this.stage.baseX + this.stage.baseWidth/2;
+            this.drone.y = 300;
+            this.drone.vx = 0;
+            this.drone.vy = 0;
+            this.drone.battery = 50; // バッテリー50%で復活
+            this.drone.isCrashing = false;
+            this.drone.crashY = 0;
+            this.drone.isRescuing = false;
+            this.drone.ropeLength = 0;
+            
+            // カメラをドローンに合わせる
+            this.camera.x = this.drone.x - this.width / 2;
+            this.camera.x = Math.max(0, Math.min(this.worldWidth - this.width, this.camera.x));
+        }
+    }
+    
+    returnToTitle() {
+        // タイトル画面に戻る（全て初期化）
+        this.state = 'menu';
+        this.failedScreen.classList.add('hidden');
+        this.startScreen.classList.remove('hidden');
+        
+        // ゲームデータを初期化
+        this.currentStage = 1;
+        this.totalRescued = 0;
+        this.continueCount = 0;
+        
+        // アップグレードシステムを初期化
+        this.upgradeSystem = new UpgradeSystem();
+        
+        this.soundManager.stopBGM();
     }
     
     gameLoop(currentTime) {

@@ -10,25 +10,32 @@
     <div id="gameContainer">
         <canvas id="gameCanvas"></canvas>
         <div id="gameUI">
+            <!-- バッテリーバー（画面上部全体） -->
+            <div id="batteryContainer">
+                <div id="batteryBarFull" class="battery-bar-full">
+                    <div id="batteryFill" class="battery-fill"></div>
+                    <div class="battery-info">
+                        <span id="batteryPercent">100%</span>
+                        <span id="batteryDrain" class="battery-drain">-0.2%/s</span>
+                    </div>
+                </div>
+            </div>
+            
             <div id="topBar">
                 <div class="status-item">
-                    <span class="label">バッテリー:</span>
-                    <div class="progress-bar">
-                        <div id="batteryBar" class="progress-fill battery"></div>
-                    </div>
-                    <span id="batteryText">100%</span>
-                    <span id="drainRateText" class="drain-rate">(-0.2%/s)</span>
+                    <span class="label">ステージ:</span>
+                    <span id="stageText">1</span>
                 </div>
                 <div class="status-item">
-                    <span class="label">収容人数:</span>
-                    <span id="capacityText">0/5</span>
-                </div>
-                <div class="status-item">
-                    <span class="label">救助人数:</span>
+                    <span class="label">救助:</span>
                     <span id="rescuedText">0</span>
                 </div>
                 <div class="status-item">
-                    <span class="label">残り時間:</span>
+                    <span class="label">収容:</span>
+                    <span id="capacityText">0/5</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">時間:</span>
                     <span id="timeText">3:00</span>
                 </div>
                 <div class="status-item upgrade-icon" id="upgradeIcon" title="アップグレード進捗">
@@ -44,14 +51,24 @@
                     <ul>
                         <li>↑↓ または W/S: 上昇・下降</li>
                         <li>←→ または A/D: 左右移動</li>
-                        <li>スペース: 救助/投下</li>
+                        <li>スペース: ハシゴで救助/投下</li>
                     </ul>
                 </div>
             </div>
             <div id="gameOverScreen" class="screen hidden">
                 <h2>ミッション完了！</h2>
                 <p id="finalScore"></p>
-                <button id="restartButton" class="button">もう一度プレイ</button>
+            </div>
+            
+            <!-- ミッション失敗画面 -->
+            <div id="failedScreen" class="screen hidden">
+                <h2>ミッション失敗</h2>
+                <p id="failedReason"></p>
+                <p id="failedScore"></p>
+                <div class="button-group">
+                    <button id="continueButton" class="button">コンティニュー ($100)</button>
+                    <button id="titleButton" class="button">タイトルに戻る</button>
+                </div>
             </div>
             
             <!-- Upgrade Selection Modal -->
@@ -59,7 +76,6 @@
                 <div class="modal-content">
                     <h2>パワーアップを選択</h2>
                     <div class="reward-info">
-                        <p>報酬: $<span id="rewardAmount">0</span></p>
                         <p>現在の資金: $<span id="currentMoney">0</span></p>
                     </div>
                     <div id="upgradeChoices" class="upgrade-choices">
@@ -80,6 +96,7 @@
             </div>
         </div>
     </div>
+    <script src="js/sound.js"></script>
     <script src="js/upgrades.js"></script>
     <script src="js/game.js"></script>
     <script src="js/drone.js"></script>

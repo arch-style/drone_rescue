@@ -32,31 +32,31 @@ class UpgradeSystem {
             acceleration: "加速性能",
             batteryEfficiency: "バッテリー効率",
             maxCapacity: "収容人数",
-            ropeSpeed: "梯子展開速度",
-            ropeLength: "梯子の長さ",
-            ropeBatteryEfficiency: "梯子バッテリー効率"
+            ropeSpeed: "ハシゴ展開速度",
+            ropeLength: "ハシゴの長さ",
+            ropeBatteryEfficiency: "ハシゴバッテリー効率"
         };
         
         // アップグレード属性（game.jsが期待する形式）
         this.attributes = {
-            maxSpeed: { name: "最高速度", description: "ドローンの最高速度が10%上昇" },
-            acceleration: { name: "加速性能", description: "ドローンの加速度が10%上昇" },
+            maxSpeed: { name: "最高速度", description: "ドローンの最高速度が20%上昇" },
+            acceleration: { name: "加速性能", description: "ドローンの加速度が20%上昇" },
             batteryEfficiency: { name: "バッテリー効率", description: "バッテリー消費が10%減少" },
             maxCapacity: { name: "収容人数", description: "最大収容人数が1人増加" },
-            ropeSpeed: { name: "梯子展開速度", description: "梯子を降ろす速度が15%上昇" },
-            ropeLength: { name: "梯子の長さ", description: "梯子の最大長が10%伸びる" },
-            ropeBatteryEfficiency: { name: "梯子バッテリー効率", description: "梯子使用時のバッテリー消費が15%減少" }
+            ropeSpeed: { name: "ハシゴ展開速度", description: "ハシゴを降ろす速度が30%上昇" },
+            ropeLength: { name: "ハシゴの長さ", description: "ハシゴの最大長が20%伸びる" },
+            ropeBatteryEfficiency: { name: "ハシゴバッテリー効率", description: "ハシゴ使用時のバッテリー消費が15%減少" }
         };
         
-        // 効果の倍率
+        // 効果の倍率（全て2倍に強化）
         this.effectMultipliers = {
-            maxSpeed: 1.1,        // 10%ずつ上昇
-            acceleration: 1.1,    // 10%ずつ上昇
-            batteryEfficiency: 0.9, // 10%ずつ消費減少
+            maxSpeed: 1.2,        // 20%ずつ上昇
+            acceleration: 1.2,    // 20%ずつ上昇
+            batteryEfficiency: 0.9, // 10%ずつ消費減少（半分に調整）
             maxCapacity: 1,       // 1人ずつ増加（特別処理）
-            ropeSpeed: 1.15,      // 15%ずつ上昇
-            ropeLength: 1.1,      // 10%ずつ上昇
-            ropeBatteryEfficiency: 0.85 // 15%ずつ消費減少
+            ropeSpeed: 1.3,       // 30%ずつ上昇
+            ropeLength: 1.2,      // 20%ずつ上昇
+            ropeBatteryEfficiency: 0.85 // 15%ずつ消費減少（半分に調整）
         };
     }
     
@@ -97,25 +97,25 @@ class UpgradeSystem {
     // 効果を適用
     applyUpgrades(drone, game) {
         // 最大速度
-        drone.maxSpeed = 350 * Math.pow(this.effectMultipliers.maxSpeed, this.levels.maxSpeed);
+        drone.maxSpeed = 700 * Math.pow(this.effectMultipliers.maxSpeed, this.levels.maxSpeed); // 基準値を2倍に
         
         // 加速度
-        drone.acceleration = 500 * Math.pow(this.effectMultipliers.acceleration, this.levels.acceleration);
+        drone.acceleration = 1000 * Math.pow(this.effectMultipliers.acceleration, this.levels.acceleration); // 基準値を2倍に
         
         // バッテリー効率
-        drone.batteryDrainBase = 0.2 * Math.pow(this.effectMultipliers.batteryEfficiency, this.levels.batteryEfficiency);
+        drone.batteryDrainBase = 0.4 * Math.pow(this.effectMultipliers.batteryEfficiency, this.levels.batteryEfficiency);
         
         // 最大収容人数（特別処理）
-        drone.maxCapacity = 5 + this.levels.maxCapacity;
+        drone.maxCapacity = 5 + this.levels.maxCapacity; // 1人ずつ増加
         
-        // 梯子を降ろす速度
+        // ハシゴを降ろす速度
         const ropeSpeedMultiplier = Math.pow(this.effectMultipliers.ropeSpeed, this.levels.ropeSpeed);
         // game.jsでropeSpeedを使用するように修正が必要
         
-        // 梯子の長さ
-        drone.maxRopeLength = 75 * Math.pow(this.effectMultipliers.ropeLength, this.levels.ropeLength);
+        // ハシゴの長さ
+        drone.maxRopeLength = 20 * Math.pow(this.effectMultipliers.ropeLength, this.levels.ropeLength); // 初期倴20
         
-        // 梯子のバッテリー効率は別途処理
+        // ハシゴのバッテリー効率は別途処理
     }
     
     // ランダムなアップグレード選択肢を生成
@@ -178,10 +178,10 @@ class UpgradeSystem {
         // バッテリー残量と残り時間の平均を取る
         const score = (batteryPercent + timePercent) / 2;
         
-        // 0〜100ドルの範囲で報酬を計算
-        const reward = Math.floor(score * 100);
+        // 0〜61ドルの範囲で報酬を計算（47 * 1.3 = 61.1）
+        const reward = Math.floor(score * 61);
         
-        return Math.max(0, Math.min(100, reward));
+        return Math.max(0, Math.min(61, reward));
     }
     
     // セーブデータ
