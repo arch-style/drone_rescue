@@ -20,6 +20,9 @@ class Game {
         this.resizeCanvas();
         window.addEventListener('resize', () => this.resizeCanvas());
         
+        // デバイスに応じて操作説明を切り替え
+        this.updateControlsDisplay();
+        
         // スクロール関連
         this.camera = {
             x: 0,
@@ -147,22 +150,33 @@ class Game {
             
             if (this.state !== 'playing') return;
             
-            const touch = e.touches[0];
-            this.touchStartTime = Date.now();
-            this.touchIdentifier = touch.identifier;
-            
-            // スティックを表示（タッチ位置を中心に）
-            analogStick.classList.remove('hidden');
-            const rect = this.canvas.getBoundingClientRect();
-            analogStick.style.left = `${touch.clientX - stickRadius}px`;
-            analogStick.style.top = `${touch.clientY - stickRadius}px`;
-            
-            this.stickCenter = {
-                x: touch.clientX,
-                y: touch.clientY
-            };
-            
-            this.touchActive = true;
+            // 複数タッチの処理
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                
+                // 最初のタッチ（アナログスティック用）
+                if (!this.touchActive) {
+                    this.touchStartTime = Date.now();
+                    this.touchIdentifier = touch.identifier;
+                    
+                    // スティックを表示（タッチ位置を中心に）
+                    analogStick.classList.remove('hidden');
+                    analogStick.style.left = `${touch.clientX - stickRadius}px`;
+                    analogStick.style.top = `${touch.clientY - stickRadius}px`;
+                    
+                    this.stickCenter = {
+                        x: touch.clientX,
+                        y: touch.clientY
+                    };
+                    
+                    this.touchActive = true;
+                } else {
+                    // 2本目以降のタッチ（救助アクション用）
+                    if (touch.identifier !== this.touchIdentifier) {
+                        this.handleRescueAction();
+                    }
+                }
+            }
         });
         
         // タッチ移動
@@ -1128,5 +1142,21 @@ class Game {
         this.canvas.style.left = '50%';
         this.canvas.style.top = '50%';
         this.canvas.style.transform = 'translate(-50%, -50%)';
+    }
+    
+    updateControlsDisplay() {
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        const pcControls = document.getElementById('pcControls');
+        const touchControls = document.getElementById('touchControls');
+        
+        if (pcControls && touchControls) {
+            if (isTouchDevice) {
+                pcControls.style.display = 'none';
+                touchControls.style.display = 'block';
+            } else {
+                pcControls.style.display = 'block';
+                touchControls.style.display = 'none';
+            }
+        }
     }
 }

@@ -2,7 +2,11 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#000000">
     <title>Drone Rescue: Sky Guardian - Prototype</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -48,10 +52,15 @@
                 <button id="startButton" class="button">ゲーム開始</button>
                 <div class="instructions">
                     <h3>操作方法</h3>
-                    <ul>
+                    <ul id="pcControls">
                         <li>↑↓ または W/S: 上昇・下降</li>
                         <li>←→ または A/D: 左右移動</li>
                         <li>スペース: ハシゴで救助/投下</li>
+                    </ul>
+                    <ul id="touchControls" style="display: none;">
+                        <li>画面をタッチ: アナログスティック表示</li>
+                        <li>スティック操作: ドローン移動</li>
+                        <li>短くタップ: ハシゴで救助/投下</li>
                     </ul>
                 </div>
             </div>
