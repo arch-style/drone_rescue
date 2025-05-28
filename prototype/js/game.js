@@ -3,6 +3,9 @@ class Game {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         
+        // バージョン情報
+        this.version = '1.0.2';
+        
         // アップグレードシステム
         this.upgradeSystem = new UpgradeSystem();
         
@@ -22,6 +25,9 @@ class Game {
         
         // デバイスに応じて操作説明を切り替え
         this.updateControlsDisplay();
+        
+        // バージョン表示を追加
+        this.displayVersion();
         
         // iOS Safariのアドレスバー対策
         this.setupMobileOptimizations();
@@ -295,8 +301,12 @@ class Game {
     }
     
     initializeGame() {
-        // ステージに応じてワールドサイズを拡大
-        this.worldWidth = 1600 + (this.currentStage - 1) * 400; // ステージごとに400px拡大
+        // ステージに応じてワールドサイズを拡大（拡大量は半分ずつ減少）
+        let expansion = 0;
+        for (let i = 1; i < this.currentStage; i++) {
+            expansion += 400 / Math.pow(2, i - 1); // 400, 200, 100, 50...
+        }
+        this.worldWidth = 1600 + expansion;
         
         // ステージ初期化（ワールドサイズを渡す）
         this.stage = new Stage(this.worldWidth, this.height, this.currentStage);
@@ -319,8 +329,8 @@ class Game {
     }
     
     generateCitizens() {
-        // 救助者数（ステージが進むと増えるが、最初は5人）
-        const citizenCount = Math.min(5 + Math.floor((this.currentStage - 1) / 2), 10);
+        // 救助者数（ステージごとに1人ずつ増加、最初は5人）
+        const citizenCount = 5 + (this.currentStage - 1);
         
         // 地上と屋上の比率
         const roofRatio = Math.min(0.3 + (this.currentStage - 1) * 0.1, 0.7);
@@ -330,38 +340,85 @@ class Game {
         // ホームポイントの位置
         const homeX = this.stage.baseX + this.stage.baseWidth / 2;
         
-        // 地上の市民を配置
+        // 地上の市民を配置（重ならないように）
         for (let i = 0; i < groundCount; i++) {
-            // ホームポイントの左右にランダムに配置
-            let x;
-            if (Math.random() < 0.3) {
-                // 30%の確率でホームポイントの左側
-                x = Math.random() * (homeX - 100) + 50;
-            } else {
-                // 70%の確率でホームポイントの右側
-                x = Math.random() * (this.worldWidth - homeX - 100) + homeX + 50;
-            }
+            let placed = false;
+            let attempts = 0;
+            const maxAttempts = 100;
             
-            const citizen = new Citizen(x, this.stage.groundLevel);
-            citizen.type = 'ground';
-            this.citizens.push(citizen);
+            while (!placed && attempts < maxAttempts) {
+                // ホームポイントの左右にランダムに配置
+                let x;
+                if (Math.random() < 0.3) {
+                    // 30%の確率でホームポイントの左側
+                    x = Math.random() * (homeX - 100) + 50;
+                } else {
+                    // 70%の確率でホームポイントの右側
+                    x = Math.random() * (this.worldWidth - homeX - 100) + homeX + 50;
+                }
+                
+                // 他の市民との重なりをチェック（キャラクター半分以上離れているか）
+                let canPlace = true;
+                const minDistance = 10; // キャラクターの半分の幅
+                
+                for (const other of this.citizens) {
+                    if (Math.abs(other.x - x) < minDistance * 2) {
+                        canPlace = false;
+                        break;
+                    }
+                }
+                
+                if (canPlace) {
+                    const citizen = new Citizen(x, this.stage.groundLevel);
+                    citizen.type = 'ground';
+                    this.citizens.push(citizen);
+                    placed = true;
+                }
+                
+                attempts++;
+            }
         }
         
-        // 屋上の市民を配置
+        // 屋上の市民を配置（重ならないように）
         const availableBuildings = [...this.stage.buildings];
         for (let i = 0; i < roofCount && availableBuildings.length > 0; i++) {
             const buildingIndex = Math.floor(Math.random() * availableBuildings.length);
             const building = availableBuildings.splice(buildingIndex, 1)[0];
             const originalIndex = this.stage.buildings.indexOf(building);
             
-            // 建物の上にランダムな位置で配置
-            const x = building.x + Math.random() * (building.width - 20) + 10;
-            const y = building.y - building.height;
+            let placed = false;
+            let attempts = 0;
+            const maxAttempts = 50;
             
-            const citizen = new Citizen(x, y);
-            citizen.type = 'roof';
-            citizen.buildingIndex = originalIndex;
-            this.citizens.push(citizen);
+            while (!placed && attempts < maxAttempts) {
+                // 建物の上にランダムな位置で配置
+                const x = building.x + Math.random() * (building.width - 20) + 10;
+                const y = building.y - building.height;
+                
+                // 他の市民との重なりをチェック
+                let canPlace = true;
+                const minDistance = 10; // キャラクターの半分の幅
+                
+                for (const other of this.citizens) {
+                    // 同じ高さ（同じ建物）の市民のみチェック
+                    if (other.type === 'roof' && Math.abs(other.y - y) < 5) {
+                        if (Math.abs(other.x - x) < minDistance * 2) {
+                            canPlace = false;
+                            break;
+                        }
+                    }
+                }
+                
+                if (canPlace) {
+                    const citizen = new Citizen(x, y);
+                    citizen.type = 'roof';
+                    citizen.buildingIndex = originalIndex;
+                    this.citizens.push(citizen);
+                    placed = true;
+                }
+                
+                attempts++;
+            }
         }
     }
     
@@ -795,6 +852,11 @@ class Game {
         } else {
             // ミッション成功
             this.state = 'gameover';
+            
+            // BGMを停止してステージクリアジングルを再生
+            this.soundManager.stopBGM();
+            this.soundManager.play('stageClear');
+            
             const h2 = this.gameOverScreen.querySelector('h2');
             h2.textContent = 'ミッション完了！';
             h2.style.color = '#4CAF50';
@@ -1145,6 +1207,20 @@ class Game {
         this.canvas.style.left = '50%';
         this.canvas.style.top = '50%';
         this.canvas.style.transform = 'translate(-50%, -50%)';
+        
+        // UIのスケールも調整
+        const gameUI = document.getElementById('gameUI');
+        if (gameUI) {
+            // キャンバスの実際の位置を取得
+            const canvasRect = this.canvas.getBoundingClientRect();
+            
+            // UIをキャンバスと同じ位置に配置し、同じスケールを適用
+            gameUI.style.position = 'absolute';
+            gameUI.style.left = `${canvasRect.left}px`;
+            gameUI.style.top = `${canvasRect.top}px`;
+            gameUI.style.transform = `scale(${scale})`;
+            gameUI.style.transformOrigin = 'top left';
+        }
     }
     
     updateControlsDisplay() {
@@ -1205,8 +1281,9 @@ class Game {
             });
         }
         
-        // フルスクリーンAPIが利用可能な場合
-        if (document.documentElement.requestFullscreen) {
+        // フルスクリーンAPIが利用可能な場合（モバイルのみ）
+        const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        if (document.documentElement.requestFullscreen && isMobile) {
             // タッチまたはクリックでフルスクリーン化を促す
             const enterFullscreen = () => {
                 if (!document.fullscreenElement) {
@@ -1223,5 +1300,31 @@ class Game {
     
     isIOS() {
         return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    }
+    
+    displayVersion() {
+        const startScreen = document.getElementById('startScreen');
+        if (!startScreen) return;
+        
+        // バージョン要素が既に存在する場合は削除
+        const existingVersion = startScreen.querySelector('.version-info');
+        if (existingVersion) {
+            existingVersion.remove();
+        }
+        
+        // バージョン情報を作成
+        const versionElement = document.createElement('div');
+        versionElement.className = 'version-info';
+        versionElement.style.cssText = `
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            font-size: 12px;
+            color: #666;
+            opacity: 0.7;
+        `;
+        versionElement.textContent = `v${this.version}`;
+        
+        startScreen.appendChild(versionElement);
     }
 }

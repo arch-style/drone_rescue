@@ -46,6 +46,9 @@ class SoundManager {
         
         // ロープ展開音
         this.sounds.rope = this.createTone(300, 0.1, 'sawtooth', 0.1);
+        
+        // ステージクリアジングル
+        this.sounds.stageClear = this.createJingle();
     }
     
     // 単音を生成
@@ -110,6 +113,43 @@ class SoundManager {
                 setTimeout(() => {
                     this.createTone(freq, duration, 'sine', 0.05)();
                 }, index * duration * 1000 / frequencies.length);
+            });
+        };
+    }
+    
+    // ステージクリアジングルを生成
+    createJingle() {
+        return () => {
+            if (!this.enabled || !this.audioContext) return;
+            
+            const now = this.audioContext.currentTime;
+            const notes = [
+                { freq: 523.25, time: 0, duration: 0.2 },      // C5
+                { freq: 659.25, time: 0.2, duration: 0.2 },    // E5
+                { freq: 783.99, time: 0.4, duration: 0.2 },    // G5
+                { freq: 1046.50, time: 0.6, duration: 0.6 },   // C6
+                { freq: 783.99, time: 1.2, duration: 0.2 },    // G5
+                { freq: 1046.50, time: 1.4, duration: 0.8 }    // C6
+            ];
+            
+            notes.forEach(note => {
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                oscillator.type = 'sine';
+                oscillator.frequency.value = note.freq;
+                
+                const startTime = now + note.time;
+                gainNode.gain.setValueAtTime(0, startTime);
+                gainNode.gain.linearRampToValueAtTime(this.sfxVolume * 0.5, startTime + 0.05);
+                gainNode.gain.linearRampToValueAtTime(this.sfxVolume * 0.5, startTime + note.duration - 0.05);
+                gainNode.gain.linearRampToValueAtTime(0, startTime + note.duration);
+                
+                oscillator.start(startTime);
+                oscillator.stop(startTime + note.duration);
             });
         };
     }
