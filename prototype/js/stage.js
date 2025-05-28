@@ -223,7 +223,7 @@ class Stage {
         // 赤十字マーク
         ctx.fillStyle = '#FF0000';
         const crossX = this.baseX + this.baseWidth/2;
-        const crossY = this.baseY - this.baseHeight/2;
+        const crossY = this.baseY - this.baseHeight/2 - 20; // 十字架1つ分（20px）上に移動
         const crossSize = 20;
         
         // 横棒

@@ -4,7 +4,7 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         
         // バージョン情報
-        this.version = '1.0.7';
+        this.version = '1.0.8';
         
         // アップグレードシステム
         this.upgradeSystem = new UpgradeSystem();
@@ -504,6 +504,20 @@ class Game {
         this.totalRescued += droppedCount; // 総救助人数を更新
         this.score += droppedCount * 100;
         this.soundManager.play('dropOff');
+        
+        // 救助表示
+        if (droppedCount > 0) {
+            this.showRescueMessage(droppedCount);
+        }
+    }
+    
+    showRescueMessage(count) {
+        this.rescueMessage = {
+            text: `${count}人救助！`,
+            timer: 2.0, // 2秒間表示
+            x: this.stage.baseX + this.stage.baseWidth / 2,
+            y: this.stage.baseY - this.stage.baseHeight - 60
+        };
     }
     
     update(deltaTime) {
@@ -514,6 +528,14 @@ class Game {
         
         // 時間更新
         this.time += deltaTime;
+        
+        // 救助メッセージタイマー更新
+        if (this.rescueMessage && this.rescueMessage.timer > 0) {
+            this.rescueMessage.timer -= deltaTime;
+            if (this.rescueMessage.timer <= 0) {
+                this.rescueMessage = null;
+            }
+        }
         
         // カメラ更新（ドローンを中心に）
         if (this.drone) {
@@ -606,11 +628,28 @@ class Game {
             }
         }
         
+        // 残り時間に応じてBGM変更
+        const remainingTime = this.timeLimit - this.time;
+        if (remainingTime <= 10 && this.soundManager.bgmSpeed !== 2.0) {
+            // 残り10秒：速度2.0倍、キー2つ上げる
+            this.soundManager.setBGMSpeed(2.0);
+            this.soundManager.setBGMKey(2);
+            this.soundManager.stopBGM();
+            this.soundManager.playBGM();
+        } else if (remainingTime <= 30 && remainingTime > 10 && this.soundManager.bgmSpeed !== 1.5) {
+            // 残り30秒：速度1.5倍、キー1つ上げる
+            this.soundManager.setBGMSpeed(1.5);
+            this.soundManager.setBGMKey(1);
+            this.soundManager.stopBGM();
+            this.soundManager.playBGM();
+        }
+        
         // 制限時間チェック
         if (this.timeLimit - this.time <= 0) {
             this.state = 'failed';
             this.failureReason = '制限時間を超過しました';
             this.soundManager.stopBGM();
+            this.soundManager.resetBGM(); // BGM設定をリセット
             this.gameOver();
         }
         
@@ -739,8 +778,14 @@ class Game {
         if (leftCount > 0) {
             this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
             this.ctx.fillRect(10, leftY, 60, 60);
+            // 左向き三角形を描画
             this.ctx.fillStyle = '#FFD700';
-            this.ctx.fillText('◀', 40, leftY + 30);
+            this.ctx.beginPath();
+            this.ctx.moveTo(25, leftY + 30);
+            this.ctx.lineTo(35, leftY + 20);
+            this.ctx.lineTo(35, leftY + 40);
+            this.ctx.closePath();
+            this.ctx.fill();
             this.ctx.fillText(leftCount.toString(), 40, leftY + 50);
             leftY += 70;
         }
@@ -750,8 +795,14 @@ class Game {
         if (homeX < this.camera.x) {
             this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
             this.ctx.fillRect(10, leftY, 60, 60);
+            // 左向き三角形を描画
             this.ctx.fillStyle = '#4CAF50';
-            this.ctx.fillText('◀', 40, leftY + 30);
+            this.ctx.beginPath();
+            this.ctx.moveTo(25, leftY + 30);
+            this.ctx.lineTo(35, leftY + 20);
+            this.ctx.lineTo(35, leftY + 40);
+            this.ctx.closePath();
+            this.ctx.fill();
             this.ctx.fillText('H', 40, leftY + 50);
             leftY += 70;
         }
@@ -760,8 +811,14 @@ class Game {
         if (!this.stage.chargingPort.used && this.stage.chargingPort.x < this.camera.x) {
             this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
             this.ctx.fillRect(10, leftY, 60, 60);
+            // 左向き三角形を描画
             this.ctx.fillStyle = '#2196F3';
-            this.ctx.fillText('◀', 40, leftY + 30);
+            this.ctx.beginPath();
+            this.ctx.moveTo(25, leftY + 30);
+            this.ctx.lineTo(35, leftY + 20);
+            this.ctx.lineTo(35, leftY + 40);
+            this.ctx.closePath();
+            this.ctx.fill();
             this.ctx.fillText('⚡', 40, leftY + 50);
         }
         
@@ -770,8 +827,14 @@ class Game {
         if (rightCount > 0) {
             this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
             this.ctx.fillRect(this.width - 70, rightY, 60, 60);
+            // 右向き三角形を描画
             this.ctx.fillStyle = '#FFD700';
-            this.ctx.fillText('▶', this.width - 40, rightY + 30);
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.width - 25, rightY + 30);
+            this.ctx.lineTo(this.width - 35, rightY + 20);
+            this.ctx.lineTo(this.width - 35, rightY + 40);
+            this.ctx.closePath();
+            this.ctx.fill();
             this.ctx.fillText(rightCount.toString(), this.width - 40, rightY + 50);
             rightY += 70;
         }
@@ -780,8 +843,14 @@ class Game {
         if (homeX > this.camera.x + this.width) {
             this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
             this.ctx.fillRect(this.width - 70, rightY, 60, 60);
+            // 右向き三角形を描画
             this.ctx.fillStyle = '#4CAF50';
-            this.ctx.fillText('▶', this.width - 40, rightY + 30);
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.width - 25, rightY + 30);
+            this.ctx.lineTo(this.width - 35, rightY + 20);
+            this.ctx.lineTo(this.width - 35, rightY + 40);
+            this.ctx.closePath();
+            this.ctx.fill();
             this.ctx.fillText('H', this.width - 40, rightY + 50);
             rightY += 70;
         }
@@ -790,8 +859,14 @@ class Game {
         if (!this.stage.chargingPort.used && this.stage.chargingPort.x > this.camera.x + this.width) {
             this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
             this.ctx.fillRect(this.width - 70, rightY, 60, 60);
+            // 右向き三角形を描画
             this.ctx.fillStyle = '#2196F3';
-            this.ctx.fillText('▶', this.width - 40, rightY + 30);
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.width - 25, rightY + 30);
+            this.ctx.lineTo(this.width - 35, rightY + 20);
+            this.ctx.lineTo(this.width - 35, rightY + 40);
+            this.ctx.closePath();
+            this.ctx.fill();
             this.ctx.fillText('⚡', this.width - 40, rightY + 50);
         }
     }
@@ -834,6 +909,30 @@ class Game {
             
             this.ctx.restore();
         }
+        
+        // 救助メッセージ表示
+        if (this.rescueMessage) {
+            const screenX = this.rescueMessage.x - this.camera.x;
+            const screenY = this.rescueMessage.y - this.camera.y;
+            
+            this.ctx.save();
+            this.ctx.translate(screenX, screenY);
+            
+            // 透明度（時間経過で薄くなる）
+            const alpha = Math.min(1, this.rescueMessage.timer / 2.0);
+            
+            // 背景
+            this.ctx.fillStyle = `rgba(255, 215, 0, ${alpha * 0.8})`;
+            this.ctx.fillRect(-60, -25, 120, 50);
+            
+            // テキスト
+            this.ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+            this.ctx.font = 'bold 20px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(this.rescueMessage.text, 0, 5);
+            
+            this.ctx.restore();
+        }
     }
     
     gameOver() {
@@ -866,6 +965,7 @@ class Game {
             
             // BGMを停止してステージクリアジングルを再生
             this.soundManager.stopBGM();
+            this.soundManager.resetBGM(); // BGM設定をリセット
             this.soundManager.play('stageClear');
             
             const h2 = this.gameOverScreen.querySelector('h2');
@@ -1130,15 +1230,34 @@ class Game {
             this.drone.y = 300;
             this.drone.vx = 0;
             this.drone.vy = 0;
-            this.drone.battery = 50; // バッテリー50%で復活
+            this.drone.battery = 100; // バッテリー100%で復活
             this.drone.isCrashing = false;
             this.drone.crashY = 0;
             this.drone.isRescuing = false;
             this.drone.ropeLength = 0;
             
+            // 時間をリセット
+            this.time = 0;
+            
+            // 乗客をクリア
+            this.drone.passengers = [];
+            
+            // 救助者も全員MAPに配置し直す
+            this.citizens.forEach(citizen => {
+                citizen.rescued = false;
+                citizen.delivered = false;
+                citizen.inDrone = false;
+                citizen.emotion = 'waiting';
+            });
+            this.rescuedCount = 0;
+            
             // カメラをドローンに合わせる
             this.camera.x = this.drone.x - this.width / 2;
             this.camera.x = Math.max(0, Math.min(this.worldWidth - this.width, this.camera.x));
+            
+            // BGMを再開（速度とキーもリセット）
+            this.soundManager.resetBGM();
+            this.soundManager.playBGM();
         }
     }
     

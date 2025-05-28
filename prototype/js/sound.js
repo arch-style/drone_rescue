@@ -7,6 +7,10 @@ class SoundManager {
         this.sfxVolume = 0.5;
         this.enabled = true;
         
+        // BGM制御
+        this.bgmSpeed = 1.0; // 通常速度
+        this.bgmKeyShift = 0; // キーシフト（半音単位）
+        
         // Web Audio APIコンテキスト
         this.audioContext = null;
         this.initAudioContext();
@@ -183,19 +187,20 @@ class SoundManager {
             if (!this.enabled) return;
             
             const now = this.audioContext.currentTime;
-            const tempo = 0.5; // 秒単位のテンポ
+            const tempo = 0.5 / this.bgmSpeed; // 速度を反映したテンポ
+            const keyMultiplier = Math.pow(2, this.bgmKeyShift / 12); // キーシフト
             
             // ベースライン
             const bassNotes = [110, 110, 130.81, 130.81, 87.31, 87.31, 130.81, 130.81];
             bassNotes.forEach((note, i) => {
-                playNote(note, now + i * tempo, tempo * 0.9);
+                playNote(note * keyMultiplier, now + i * tempo, tempo * 0.9);
             });
             
             // メロディ
             const melodyNotes = [220, 0, 261.63, 220, 174.61, 0, 220, 261.63];
             melodyNotes.forEach((note, i) => {
                 if (note > 0) {
-                    playNote(note, now + i * tempo, tempo * 0.7);
+                    playNote(note * keyMultiplier, now + i * tempo, tempo * 0.7);
                 }
             });
             
@@ -232,6 +237,21 @@ class SoundManager {
     
     setBGMVolume(volume) {
         this.bgmVolume = Math.max(0, Math.min(1, volume));
+    }
+    
+    // BGM速度とキーを設定
+    setBGMSpeed(speed) {
+        this.bgmSpeed = speed;
+    }
+    
+    setBGMKey(keyShift) {
+        this.bgmKeyShift = keyShift;
+    }
+    
+    // BGM設定をリセット
+    resetBGM() {
+        this.bgmSpeed = 1.0;
+        this.bgmKeyShift = 0;
     }
     
     // 有効/無効切り替え

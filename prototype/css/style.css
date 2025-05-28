@@ -139,8 +139,8 @@ body {
 }
 
 #topBar {
-    position: absolute;
-    top: 50px;
+    position: fixed;
+    top: 10px;
     left: 10px;
     right: 10px;
     display: flex;
@@ -150,6 +150,9 @@ body {
     border-radius: 10px;
     font-size: 12px;
     justify-content: center;
+    z-index: 50;
+    max-width: calc(100vw - 20px);
+    box-sizing: border-box;
 }
 
 .status-item {

@@ -219,7 +219,8 @@ class Drone {
             const shadowOpacity = Math.max(0.1, 0.3 - (this.y - groundLevel) / 1000); // 高度に応じて薄くなる
             ctx.fillStyle = `rgba(0, 0, 0, ${shadowOpacity})`;
             ctx.beginPath();
-            ctx.ellipse(this.x, groundLevel - 10, this.width/2 * shadowScale, 8 * shadowScale, 0, 0, Math.PI * 2);
+            // 影の高さ2つ分下に配置
+            ctx.ellipse(this.x, groundLevel - 26, this.width/2 * shadowScale, 8 * shadowScale, 0, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
         }
@@ -376,10 +377,10 @@ class Drone {
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
             ctx.lineWidth = 1.5;
             
-            // 2枚ブレード
+            // 2枚ブレード（長さ2倍）
             ctx.beginPath();
-            ctx.moveTo(-8, 0);
-            ctx.lineTo(8, 0);
+            ctx.moveTo(-16, 0);
+            ctx.lineTo(16, 0);
             ctx.stroke();
             
             // モーターハブ（白色）
