@@ -16,6 +16,10 @@ class Game {
         this.canvas.width = this.width;
         this.canvas.height = this.height;
         
+        // レスポンシブ対応
+        this.resizeCanvas();
+        window.addEventListener('resize', () => this.resizeCanvas());
+        
         // スクロール関連
         this.camera = {
             x: 0,
@@ -89,6 +93,18 @@ class Game {
         if (closeProgressBtn) {
             closeProgressBtn.addEventListener('click', () => this.closeUpgradeProgress());
         }
+        
+        // タイトルに戻るボタン
+        const titleFromProgressBtn = document.getElementById('titleFromProgressBtn');
+        if (titleFromProgressBtn) {
+            titleFromProgressBtn.addEventListener('click', () => {
+                this.soundManager.play('click');
+                if (confirm('進行状況を失いますが、タイトルに戻りますか？')) {
+                    this.closeUpgradeProgress();
+                    this.returnToTitle();
+                }
+            });
+        }
     }
     
     setupInput() {
@@ -135,8 +151,9 @@ class Game {
             this.touchStartTime = Date.now();
             this.touchIdentifier = touch.identifier;
             
-            // スティックを表示
+            // スティックを表示（タッチ位置を中心に）
             analogStick.classList.remove('hidden');
+            const rect = this.canvas.getBoundingClientRect();
             analogStick.style.left = `${touch.clientX - stickRadius}px`;
             analogStick.style.top = `${touch.clientY - stickRadius}px`;
             
@@ -405,7 +422,10 @@ class Game {
     }
     
     update(deltaTime) {
-        if (this.state !== 'playing') return;
+        if (this.state !== 'playing' && this.state !== 'paused') return;
+        
+        // pausedの場合は更新を停止
+        if (this.state === 'paused') return;
         
         // 時間更新
         this.time += deltaTime;
@@ -923,6 +943,10 @@ class Game {
     }
     
     showUpgradeProgress() {
+        // ゲームを一時停止
+        const previousState = this.state;
+        this.state = 'paused';
+        
         const modal = document.getElementById('upgradeProgressModal');
         const list = document.getElementById('upgradeList');
         
@@ -997,11 +1021,19 @@ class Game {
         
         modal.classList.remove('hidden');
         
-        // ゲームは続行（ポーズしない）
+        // 前の状態を保存して、閉じるボタンで復元できるようにする
+        modal.dataset.previousState = previousState;
     }
     
     closeUpgradeProgress() {
-        document.getElementById('upgradeProgressModal').classList.add('hidden');
+        const modal = document.getElementById('upgradeProgressModal');
+        modal.classList.add('hidden');
+        
+        // 前の状態に戻す
+        const previousState = modal.dataset.previousState;
+        if (previousState && previousState !== 'paused') {
+            this.state = previousState;
+        }
     }
     
     nextStage() {
@@ -1067,5 +1099,34 @@ class Game {
     start() {
         this.lastTime = performance.now();
         this.gameLoop(this.lastTime);
+    }
+    
+    resizeCanvas() {
+        const container = document.getElementById('gameContainer');
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+        
+        // キャンバスのアスペクト比
+        const canvasRatio = this.width / this.height;
+        const windowRatio = windowWidth / windowHeight;
+        
+        let scale;
+        if (windowRatio > canvasRatio) {
+            // ウィンドウが横長の場合、高さに合わせる
+            scale = windowHeight / this.height;
+        } else {
+            // ウィンドウが縦長の場合、幅に合わせる
+            scale = windowWidth / this.width;
+        }
+        
+        // キャンバスのスタイルを設定
+        this.canvas.style.width = `${this.width * scale}px`;
+        this.canvas.style.height = `${this.height * scale}px`;
+        
+        // 中央揃え
+        this.canvas.style.position = 'absolute';
+        this.canvas.style.left = '50%';
+        this.canvas.style.top = '50%';
+        this.canvas.style.transform = 'translate(-50%, -50%)';
     }
 }

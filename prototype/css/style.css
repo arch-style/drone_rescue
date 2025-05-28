@@ -512,3 +512,19 @@ h3 {
 .close-btn:hover {
     background: #45a049;
 }
+
+.title-btn {
+    background: #d32f2f;
+    margin-left: 10px;
+}
+
+.title-btn:hover {
+    background: #f44336;
+}
+
+.modal .button-group {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+}
