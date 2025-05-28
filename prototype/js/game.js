@@ -4,7 +4,7 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         
         // バージョン情報
-        this.version = '1.0.5';
+        this.version = '1.0.7';
         
         // アップグレードシステム
         this.upgradeSystem = new UpgradeSystem();
@@ -701,7 +701,7 @@ class Game {
         
         // ドローン描画
         if (this.drone) {
-            this.drone.render(this.ctx);
+            this.drone.render(this.ctx, this.stage.groundLevel);
         }
         
         this.ctx.restore();
