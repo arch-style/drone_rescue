@@ -17,12 +17,12 @@ class UpgradeSystem {
         
         // 基本価格
         this.basePrices = {
-            maxSpeed: 20,
-            acceleration: 15,
-            batteryEfficiency: 25,
-            maxCapacity: 30,
-            ropeSpeed: 15,
-            ropeLength: 20,
+            maxSpeed: 15,
+            acceleration: 10,
+            batteryEfficiency: 20,
+            maxCapacity: 25,
+            ropeSpeed: 10,
+            ropeLength: 15,
             ropeBatteryEfficiency: 20
         };
         
@@ -39,12 +39,12 @@ class UpgradeSystem {
         
         // アップグレード属性（game.jsが期待する形式）
         this.attributes = {
-            maxSpeed: { name: "最高速度", description: "ドローンの最高速度が20%上昇" },
+            maxSpeed: { name: "最高速度", description: "ドローンの最高速度が%上昇" },
             acceleration: { name: "加速性能", description: "ドローンの加速度が20%上昇" },
             batteryEfficiency: { name: "バッテリー効率", description: "バッテリー消費が10%減少" },
             maxCapacity: { name: "収容人数", description: "最大収容人数が1人増加" },
             ropeSpeed: { name: "ハシゴ展開速度", description: "ハシゴを降ろす速度が30%上昇" },
-            ropeLength: { name: "ハシゴの長さ", description: "ハシゴの最大長が20%伸びる" },
+            ropeLength: { name: "ハシゴの長さ", description: "ハシゴの最大長が100%伸びる" },
             ropeBatteryEfficiency: { name: "ハシゴバッテリー効率", description: "ハシゴ使用時のバッテリー消費が15%減少" }
         };
         
@@ -55,7 +55,7 @@ class UpgradeSystem {
             batteryEfficiency: 0.9, // 10%ずつ消費減少（半分に調整）
             maxCapacity: 1,       // 1人ずつ増加（特別処理）
             ropeSpeed: 1.3,       // 30%ずつ上昇
-            ropeLength: 1.2,      // 20%ずつ上昇
+            ropeLength: 2.0,      // 100%ずつ上昇
             ropeBatteryEfficiency: 0.85 // 15%ずつ消費減少（半分に調整）
         };
     }
@@ -113,7 +113,7 @@ class UpgradeSystem {
         // game.jsでropeSpeedを使用するように修正が必要
         
         // ハシゴの長さ
-        drone.maxRopeLength = 20 * Math.pow(this.effectMultipliers.ropeLength, this.levels.ropeLength); // 初期倴20
+        drone.maxRopeLength = 20 * Math.pow(this.effectMultipliers.ropeLength, this.levels.ropeLength); // 初期倴
         
         // ハシゴのバッテリー効率は別途処理
     }

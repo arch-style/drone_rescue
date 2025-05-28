@@ -21,7 +21,9 @@ class Stage {
         
         // 充電ポート（ランダムな位置に配置）
         const portSide = Math.random() < 0.5 ? 'left' : 'right';
-        const portRange = width * 0.3; // ホームポイントから30%の範囲
+        const baseRange = width * 0.2; // 基本範囲20%
+        const stageMultiplier = 1 + (this.stageNumber - 1) * 0.3; // ステージごとに振り幅拡大
+        const portRange = baseRange * stageMultiplier;
         
         if (portSide === 'left') {
             this.chargingPort = {

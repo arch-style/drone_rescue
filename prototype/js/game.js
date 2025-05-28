@@ -4,7 +4,7 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         
         // バージョン情報
-        this.version = '1.0.2';
+        this.version = '1.0.4';
         
         // アップグレードシステム
         this.upgradeSystem = new UpgradeSystem();
@@ -115,6 +115,17 @@ class Game {
                     this.closeUpgradeProgress();
                     this.returnToTitle();
                 }
+            });
+        }
+        
+        // スキップボタン
+        const skipUpgradeBtn = document.getElementById('skipUpgradeBtn');
+        if (skipUpgradeBtn) {
+            skipUpgradeBtn.addEventListener('click', () => {
+                this.soundManager.play('click');
+                const modal = document.getElementById('upgradeModal');
+                modal.classList.add('hidden');
+                this.nextStage();
             });
         }
     }
@@ -318,9 +329,9 @@ class Game {
         // アップグレードを適用
         this.upgradeSystem.applyUpgrades(this.drone, this);
         
-        // 充電ポートの充電量をステージに応じて設定
-        const baseChargeAmount = 30 - Math.min(this.currentStage * 2, 20); // ステージが進むほど充電量が減る
-        this.stage.chargingPort.chargeAmount = baseChargeAmount;
+        // 充電ポートの充電量をステージに応じて設定（大幅に増加）
+        const baseChargeAmount = 50 - Math.min(this.currentStage * 3, 25); // 基本50%から段階的に減少
+        this.stage.chargingPort.chargeAmount = Math.max(baseChargeAmount, 25); // 最低25%は保証
         this.stage.chargingPort.used = false;
         
         // 市民配置（ランダム生成）

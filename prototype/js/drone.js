@@ -250,69 +250,55 @@ class Drone {
         }
         
         // 収容人数がMAXの場合、ドローンを赤く表示
-        const bodyColor = this.passengers.length >= this.maxCapacity ? '#CC0000' : '#1a1a1a';
+        const bodyColor = this.passengers.length >= this.maxCapacity ? '#CC0000' : '#2C2C2C';
         
-        // メインボディ（横から見た形）
+        // DJI MAVIC風ドローン描画（やや上から見た視点）
+        // メインボディ（中央部）
         ctx.fillStyle = bodyColor;
-        ctx.beginPath();
-        ctx.moveTo(-this.width/2, -this.height/3);
-        ctx.lineTo(this.width/2, -this.height/3);
-        ctx.lineTo(this.width/2 - 5, this.height/2);
-        ctx.lineTo(-this.width/2 + 5, this.height/2);
-        ctx.closePath();
-        ctx.fill();
+        ctx.fillRect(-12, -8, 24, 16);
         
-        // コックピット（前方）
-        ctx.fillStyle = '#00BCD4';
-        ctx.beginPath();
-        if (this.facing === 1) {
-            ctx.moveTo(this.width/2, -this.height/3);
-            ctx.lineTo(this.width/2 + 8, 0);
-            ctx.lineTo(this.width/2, this.height/3);
-            ctx.lineTo(this.width/2 - 5, this.height/3);
-            ctx.lineTo(this.width/2 - 5, -this.height/3);
-        } else {
-            ctx.moveTo(-this.width/2, -this.height/3);
-            ctx.lineTo(-this.width/2 - 8, 0);
-            ctx.lineTo(-this.width/2, this.height/3);
-            ctx.lineTo(-this.width/2 + 5, this.height/3);
-            ctx.lineTo(-this.width/2 + 5, -this.height/3);
-        }
-        ctx.closePath();
-        ctx.fill();
+        // カメラジンバル（前方）
+        ctx.fillStyle = '#1C1C1C';
+        ctx.fillRect(-4, -10, 8, 4);
         
-        // ランディングギア
-        ctx.strokeStyle = '#444';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(-this.width/3, this.height/2);
-        ctx.lineTo(-this.width/3, this.height/2 + 5);
-        ctx.moveTo(this.width/3, this.height/2);
-        ctx.lineTo(this.width/3, this.height/2 + 5);
-        ctx.stroke();
+        // アーム（4本）
+        ctx.fillStyle = '#404040';
+        // 前左アーム
+        ctx.fillRect(-this.width/2 + 5, -this.height/2 + 5, 15, 4);
+        // 前右アーム
+        ctx.fillRect(this.width/2 - 20, -this.height/2 + 5, 15, 4);
+        // 後左アーム
+        ctx.fillRect(-this.width/2 + 5, this.height/2 - 9, 15, 4);
+        // 後右アーム
+        ctx.fillRect(this.width/2 - 20, this.height/2 - 9, 15, 4);
         
-        // テールローター（横から見た時の特徴）
-        ctx.strokeStyle = '#333';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(-this.facing * this.width/2, 0);
-        ctx.lineTo(-this.facing * this.width/2 - 10, 0);
-        ctx.stroke();
-        
-        // テールローターブレード
-        ctx.save();
-        ctx.translate(-this.facing * (this.width/2 + 10), 0);
-        ctx.rotate(this.propellerAngle * 2);
+        // プロペラガード（4つ）
         ctx.strokeStyle = '#666';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(0, -6);
-        ctx.lineTo(0, 6);
-        ctx.stroke();
-        ctx.restore();
+        ctx.lineWidth = 1.5;
+        const guardRadius = 8;
         
-        // メインローター（上部）
-        this.renderMainRotor(ctx);
+        // 前左プロペラガード
+        ctx.beginPath();
+        ctx.arc(-this.width/2 + 12, -this.height/2 + 7, guardRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // 前右プロペラガード
+        ctx.beginPath();
+        ctx.arc(this.width/2 - 12, -this.height/2 + 7, guardRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // 後左プロペラガード
+        ctx.beginPath();
+        ctx.arc(-this.width/2 + 12, this.height/2 - 7, guardRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // 後右プロペラガード
+        ctx.beginPath();
+        ctx.arc(this.width/2 - 12, this.height/2 - 7, guardRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // プロペラ（4つ）
+        this.renderQuadcopterProps(ctx);
         
         // 乗客表示
         if (this.passengers.length > 0) {
@@ -341,42 +327,40 @@ class Drone {
         ctx.restore();
     }
     
-    renderMainRotor(ctx) {
-        // メインローター（上部）
-        ctx.save();
-        ctx.translate(0, -this.height/2 - 8);
+    renderQuadcopterProps(ctx) {
+        // 4つのプロペラを描画（クアッドコプター風）
+        const propPositions = [
+            {x: -this.width/2 + 12, y: -this.height/2 + 7}, // 前左
+            {x: this.width/2 - 12, y: -this.height/2 + 7},  // 前右
+            {x: -this.width/2 + 12, y: this.height/2 - 7},  // 後左
+            {x: this.width/2 - 12, y: this.height/2 - 7}    // 後右
+        ];
         
-        // ローターマスト
-        ctx.strokeStyle = '#444';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(0, 8);
-        ctx.stroke();
-        
-        // ローターブレード
-        ctx.rotate(this.propellerAngle);
-        ctx.strokeStyle = 'rgba(80, 80, 80, 0.8)';
-        ctx.lineWidth = 3;
-        
-        // ブレード1
-        ctx.beginPath();
-        ctx.moveTo(-this.width, 0);
-        ctx.lineTo(this.width, 0);
-        ctx.stroke();
-        
-        // ブレード2（90度回転）
-        ctx.beginPath();
-        ctx.moveTo(0, -this.width);
-        ctx.lineTo(0, this.width);
-        ctx.stroke();
-        
-        // センターハブ
-        ctx.fillStyle = '#333';
-        ctx.beginPath();
-        ctx.arc(0, 0, 3, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.restore();
+        propPositions.forEach((pos, index) => {
+            ctx.save();
+            ctx.translate(pos.x, pos.y);
+            
+            // 各プロペラの回転角度（少し位相をずらす）
+            const rotation = this.propellerAngle + (index * Math.PI / 6);
+            ctx.rotate(rotation);
+            
+            // プロペラブレード（透明度で回転効果）
+            ctx.strokeStyle = 'rgba(100, 100, 100, 0.7)';
+            ctx.lineWidth = 2;
+            
+            // 2枚ブレード
+            ctx.beginPath();
+            ctx.moveTo(-6, 0);
+            ctx.lineTo(6, 0);
+            ctx.stroke();
+            
+            // モーターハブ
+            ctx.fillStyle = '#444';
+            ctx.beginPath();
+            ctx.arc(0, 0, 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+        });
     }
 }
