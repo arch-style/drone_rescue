@@ -4,7 +4,7 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         
         // バージョン情報
-        this.version = '1.0.4';
+        this.version = '1.0.5';
         
         // アップグレードシステム
         this.upgradeSystem = new UpgradeSystem();
@@ -932,6 +932,12 @@ class Game {
                 card.className += ' special';
             }
             
+            // 金額不足の場合はグレーアウト
+            const canAfford = this.upgradeSystem.money >= upgrade.price;
+            if (!canAfford) {
+                card.className += ' disabled';
+            }
+            
             // アップグレード名
             const nameDiv = document.createElement('div');
             nameDiv.className = 'upgrade-name';
@@ -968,47 +974,24 @@ class Game {
             }
             card.appendChild(priceDiv);
             
-            // クリックイベント
+            // クリックイベント（金額不足の場合は無効）
             card.addEventListener('click', () => {
-                if (this.upgradeSystem.money >= upgrade.price) {
-                    this.soundManager.play('powerup');
-                    this.purchaseUpgrade(upgrade);
-                    modal.classList.add('hidden');
-                    // 次のステージへ
-                    this.nextStage();
-                } else {
-                    alert('資金が不足しています');
+                if (!canAfford) {
+                    // グレーアウトされている場合は何もしない
+                    return;
                 }
+                
+                this.soundManager.play('powerup');
+                this.purchaseUpgrade(upgrade);
+                modal.classList.add('hidden');
+                // 次のステージへ
+                this.nextStage();
             });
             
             choicesContainer.appendChild(card);
         });
         
-        // 「何も買わない」選択肢を追加
-        const skipCard = document.createElement('div');
-        skipCard.className = 'upgrade-card';
-        
-        const skipName = document.createElement('div');
-        skipName.className = 'upgrade-name';
-        skipName.textContent = 'スキップ';
-        skipCard.appendChild(skipName);
-        
-        const skipDetails = document.createElement('div');
-        skipDetails.className = 'upgrade-details';
-        skipDetails.innerHTML = '何も買わずに次のステージへ';
-        skipCard.appendChild(skipDetails);
-        
-        const skipPrice = document.createElement('div');
-        skipPrice.innerHTML = '<span class="upgrade-price">無料</span>';
-        skipCard.appendChild(skipPrice);
-        
-        skipCard.addEventListener('click', () => {
-            this.soundManager.play('click');
-            modal.classList.add('hidden');
-            this.nextStage();
-        });
-        
-        choicesContainer.appendChild(skipCard);
+        // スキップ選択肢は上部のボタンで代替するため削除
         
         // モーダルを表示
         modal.classList.remove('hidden');

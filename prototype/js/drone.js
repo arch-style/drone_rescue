@@ -7,8 +7,8 @@ class Drone {
         this.vy = 0;
         
         // ドローンの仕様
-        this.width = 40;
-        this.height = 20;
+        this.width = 60; // 1.5倍に拡大
+        this.height = 30; // 1.5倍に拡大
         this.maxSpeed = 700; // 350 * 2 = 700
         this.acceleration = 1000; // 500 * 2 = 1000
         this.friction = 0.92;
@@ -250,52 +250,64 @@ class Drone {
         }
         
         // 収容人数がMAXの場合、ドローンを赤く表示
-        const bodyColor = this.passengers.length >= this.maxCapacity ? '#CC0000' : '#2C2C2C';
+        const bodyColor = this.passengers.length >= this.maxCapacity ? '#CC0000' : '#FFFFFF';
         
-        // DJI MAVIC風ドローン描画（やや上から見た視点）
-        // メインボディ（中央部）
+        // 画像を参考にしたドローン描画（上から見た視点）
+        // メインボディ（中央部）- 円形
         ctx.fillStyle = bodyColor;
-        ctx.fillRect(-12, -8, 24, 16);
+        ctx.beginPath();
+        ctx.arc(0, 0, 15, 0, Math.PI * 2);
+        ctx.fill();
         
-        // カメラジンバル（前方）
+        // メインボディの円形エッジ
+        ctx.strokeStyle = '#E0E0E0';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        // カメラジンバル（前方）- 小さな黒い四角
         ctx.fillStyle = '#1C1C1C';
-        ctx.fillRect(-4, -10, 8, 4);
+        ctx.fillRect(-3, -12, 6, 4);
         
-        // アーム（4本）
-        ctx.fillStyle = '#404040';
+        // アーム（4本）- 白いアーム
+        ctx.fillStyle = bodyColor;
+        ctx.strokeStyle = '#E0E0E0';
+        ctx.lineWidth = 1;
+        
+        const armLength = this.width/2 - 15;
+        const armWidth = 6;
+        
         // 前左アーム
-        ctx.fillRect(-this.width/2 + 5, -this.height/2 + 5, 15, 4);
+        ctx.fillRect(-armLength - 15, -armWidth/2 - 8, armLength, armWidth);
+        ctx.strokeRect(-armLength - 15, -armWidth/2 - 8, armLength, armWidth);
+        
         // 前右アーム
-        ctx.fillRect(this.width/2 - 20, -this.height/2 + 5, 15, 4);
+        ctx.fillRect(15, -armWidth/2 - 8, armLength, armWidth);
+        ctx.strokeRect(15, -armWidth/2 - 8, armLength, armWidth);
+        
         // 後左アーム
-        ctx.fillRect(-this.width/2 + 5, this.height/2 - 9, 15, 4);
+        ctx.fillRect(-armLength - 15, -armWidth/2 + 8, armLength, armWidth);
+        ctx.strokeRect(-armLength - 15, -armWidth/2 + 8, armLength, armWidth);
+        
         // 後右アーム
-        ctx.fillRect(this.width/2 - 20, this.height/2 - 9, 15, 4);
+        ctx.fillRect(15, -armWidth/2 + 8, armLength, armWidth);
+        ctx.strokeRect(15, -armWidth/2 + 8, armLength, armWidth);
         
-        // プロペラガード（4つ）
-        ctx.strokeStyle = '#666';
-        ctx.lineWidth = 1.5;
-        const guardRadius = 8;
-        
-        // 前左プロペラガード
-        ctx.beginPath();
-        ctx.arc(-this.width/2 + 12, -this.height/2 + 7, guardRadius, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // 前右プロペラガード
-        ctx.beginPath();
-        ctx.arc(this.width/2 - 12, -this.height/2 + 7, guardRadius, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // 後左プロペラガード
-        ctx.beginPath();
-        ctx.arc(-this.width/2 + 12, this.height/2 - 7, guardRadius, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // 後右プロペラガード
-        ctx.beginPath();
-        ctx.arc(this.width/2 - 12, this.height/2 - 7, guardRadius, 0, Math.PI * 2);
-        ctx.stroke();
+        // 赤いストライプ（装飾）
+        if (this.passengers.length < this.maxCapacity) {
+            ctx.strokeStyle = '#FF0000';
+            ctx.lineWidth = 2;
+            
+            // 前アームの赤いライン
+            ctx.beginPath();
+            ctx.moveTo(-armLength, -5);
+            ctx.lineTo(-20, -5);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(20, -5);
+            ctx.lineTo(armLength, -5);
+            ctx.stroke();
+        }
         
         // プロペラ（4つ）
         this.renderQuadcopterProps(ctx);
@@ -328,37 +340,40 @@ class Drone {
     }
     
     renderQuadcopterProps(ctx) {
-        // 4つのプロペラを描画（クアッドコプター風）
+        // 4つのプロペラを描画（画像のような位置）
         const propPositions = [
-            {x: -this.width/2 + 12, y: -this.height/2 + 7}, // 前左
-            {x: this.width/2 - 12, y: -this.height/2 + 7},  // 前右
-            {x: -this.width/2 + 12, y: this.height/2 - 7},  // 後左
-            {x: this.width/2 - 12, y: this.height/2 - 7}    // 後右
+            {x: -this.width/2 + 5, y: -8}, // 前左
+            {x: this.width/2 - 5, y: -8},  // 前右  
+            {x: -this.width/2 + 5, y: 8},  // 後左
+            {x: this.width/2 - 5, y: 8}    // 後右
         ];
         
         propPositions.forEach((pos, index) => {
             ctx.save();
             ctx.translate(pos.x, pos.y);
             
-            // 各プロペラの回転角度（少し位相をずらす）
-            const rotation = this.propellerAngle + (index * Math.PI / 6);
+            // 各プロペラの回転角度（高速回転アニメーション）
+            const rotation = this.propellerAngle * (index % 2 === 0 ? 1 : -1); // 対角線で反対方向
             ctx.rotate(rotation);
             
-            // プロペラブレード（透明度で回転効果）
-            ctx.strokeStyle = 'rgba(100, 100, 100, 0.7)';
-            ctx.lineWidth = 2;
+            // プロペラブレード（白色、透明度で回転効果）
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.lineWidth = 1.5;
             
             // 2枚ブレード
             ctx.beginPath();
-            ctx.moveTo(-6, 0);
-            ctx.lineTo(6, 0);
+            ctx.moveTo(-8, 0);
+            ctx.lineTo(8, 0);
             ctx.stroke();
             
-            // モーターハブ
-            ctx.fillStyle = '#444';
+            // モーターハブ（白色）
+            ctx.fillStyle = '#FFFFFF';
+            ctx.strokeStyle = '#E0E0E0';
+            ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.arc(0, 0, 2, 0, Math.PI * 2);
+            ctx.arc(0, 0, 3, 0, Math.PI * 2);
             ctx.fill();
+            ctx.stroke();
             
             ctx.restore();
         });
