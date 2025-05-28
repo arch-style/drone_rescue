@@ -109,66 +109,133 @@ class Game {
         
         // タッチコントロールの設定
         this.setupTouchControls();
-        
-        // タッチデバイスの判定と表示
-        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-            document.getElementById('touchControls').classList.remove('hidden');
-        }
     }
     
     setupTouchControls() {
-        const controls = document.querySelectorAll('.control-button');
+        // アナログスティック関連の変数
+        this.touchActive = false;
+        this.touchStartTime = 0;
+        this.touchIdentifier = null;
+        this.stickPosition = { x: 0, y: 0 };
+        this.stickCenter = { x: 0, y: 0 };
         
-        controls.forEach(button => {
-            const key = button.getAttribute('data-key');
+        const analogStick = document.getElementById('analogStick');
+        const stickBase = analogStick.querySelector('.stick-base');
+        const stickKnob = analogStick.querySelector('.stick-knob');
+        const stickRadius = 75; // スティックベースの半径
+        const knobMaxDistance = 50; // ノブの最大移動距離
+        
+        // タッチ開始
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
             
-            // タッチ開始
-            button.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                button.classList.add('active');
-                this.keys[key] = true;
-                
-                if (key === ' ' && this.state === 'playing') {
-                    this.handleRescueAction();
+            if (this.state !== 'playing') return;
+            
+            const touch = e.touches[0];
+            this.touchStartTime = Date.now();
+            this.touchIdentifier = touch.identifier;
+            
+            // スティックを表示
+            analogStick.classList.remove('hidden');
+            analogStick.style.left = `${touch.clientX - stickRadius}px`;
+            analogStick.style.top = `${touch.clientY - stickRadius}px`;
+            
+            this.stickCenter = {
+                x: touch.clientX,
+                y: touch.clientY
+            };
+            
+            this.touchActive = true;
+        });
+        
+        // タッチ移動
+        window.addEventListener('touchmove', (e) => {
+            if (!this.touchActive) return;
+            
+            // 該当するタッチを探す
+            let touch = null;
+            for (let i = 0; i < e.touches.length; i++) {
+                if (e.touches[i].identifier === this.touchIdentifier) {
+                    touch = e.touches[i];
+                    break;
                 }
-            });
+            }
             
-            // タッチ終了
-            button.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                button.classList.remove('active');
-                this.keys[key] = false;
-            });
+            if (!touch) return;
             
-            // タッチキャンセル
-            button.addEventListener('touchcancel', (e) => {
-                e.preventDefault();
-                button.classList.remove('active');
-                this.keys[key] = false;
-            });
+            e.preventDefault();
             
-            // マウスイベント（デバッグ用）
-            button.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                button.classList.add('active');
-                this.keys[key] = true;
-                
-                if (key === ' ' && this.state === 'playing') {
-                    this.handleRescueAction();
+            // スティックの位置を計算
+            const deltaX = touch.clientX - this.stickCenter.x;
+            const deltaY = touch.clientY - this.stickCenter.y;
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            
+            // 最大距離に制限
+            let limitedDeltaX = deltaX;
+            let limitedDeltaY = deltaY;
+            
+            if (distance > knobMaxDistance) {
+                const angle = Math.atan2(deltaY, deltaX);
+                limitedDeltaX = Math.cos(angle) * knobMaxDistance;
+                limitedDeltaY = Math.sin(angle) * knobMaxDistance;
+            }
+            
+            // ノブの位置を更新
+            stickKnob.style.transform = `translate(${limitedDeltaX}px, ${limitedDeltaY}px)`;
+            
+            // 入力値を正規化（-1 から 1 の範囲）
+            this.stickPosition = {
+                x: limitedDeltaX / knobMaxDistance,
+                y: limitedDeltaY / knobMaxDistance
+            };
+        });
+        
+        // タッチ終了
+        window.addEventListener('touchend', (e) => {
+            if (!this.touchActive) return;
+            
+            // 該当するタッチが終了したか確認
+            let touchEnded = true;
+            for (let i = 0; i < e.touches.length; i++) {
+                if (e.touches[i].identifier === this.touchIdentifier) {
+                    touchEnded = false;
+                    break;
                 }
-            });
+            }
             
-            button.addEventListener('mouseup', (e) => {
-                e.preventDefault();
-                button.classList.remove('active');
-                this.keys[key] = false;
-            });
+            if (!touchEnded) return;
             
-            button.addEventListener('mouseleave', (e) => {
-                e.preventDefault();
-                button.classList.remove('active');
-                this.keys[key] = false;
-            });
+            e.preventDefault();
+            
+            const touchDuration = Date.now() - this.touchStartTime;
+            
+            // 短いタップ（300ms以下）の場合、救助アクション
+            if (touchDuration < 300 && Math.abs(this.stickPosition.x) < 0.2 && Math.abs(this.stickPosition.y) < 0.2) {
+                this.handleRescueAction();
+            }
+            
+            // スティックを非表示
+            analogStick.classList.add('hidden');
+            stickKnob.style.transform = 'translate(0, 0)';
+            
+            this.touchActive = false;
+            this.stickPosition = { x: 0, y: 0 };
+            this.touchIdentifier = null;
+        });
+        
+        // タッチキャンセル
+        window.addEventListener('touchcancel', (e) => {
+            if (!this.touchActive) return;
+            
+            e.preventDefault();
+            
+            // スティックを非表示
+            analogStick.classList.add('hidden');
+            stickKnob.style.transform = 'translate(0, 0)';
+            
+            this.touchActive = false;
+            this.stickPosition = { x: 0, y: 0 };
+            this.touchIdentifier = null;
         });
     }
     
@@ -184,10 +251,6 @@ class Game {
         this.gameOverScreen.classList.add('hidden');
         this.failedScreen.classList.add('hidden');
         
-        // タッチコントロールを表示
-        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-            document.getElementById('touchControls').classList.remove('hidden');
-        }
         
         // BGM開始（既に再生中の場合は停止してから再開始）
         this.soundManager.stopBGM();
@@ -356,7 +419,12 @@ class Game {
         
         // ドローン更新
         if (this.drone) {
-            this.drone.update(deltaTime, this.keys);
+            // タッチ操作の場合はアナログスティックの値を使用
+            if (this.touchActive) {
+                this.drone.updateWithAnalogStick(deltaTime, this.stickPosition);
+            } else {
+                this.drone.update(deltaTime, this.keys);
+            }
             
             // ロープ救助の処理（ゲーム終了時は処理しない）
             if (this.drone.isRescuing && this.state === 'playing') {
@@ -686,8 +754,6 @@ class Game {
             
             this.failedScreen.classList.remove('hidden');
             
-            // タッチコントロールを非表示
-            document.getElementById('touchControls').classList.add('hidden');
             return;
         } else {
             // ミッション成功
@@ -724,9 +790,6 @@ class Game {
         
         // ゲームオーバー画面表示
         this.gameOverScreen.classList.remove('hidden');
-        
-        // タッチコントロールを非表示
-        document.getElementById('touchControls').classList.add('hidden');
         
         // 3秒後にゲームオーバー画面を非表示にしてからアップグレード選択を表示
         setTimeout(() => {
@@ -971,11 +1034,6 @@ class Game {
             // カメラをドローンに合わせる
             this.camera.x = this.drone.x - this.width / 2;
             this.camera.x = Math.max(0, Math.min(this.worldWidth - this.width, this.camera.x));
-            
-            // タッチコントロールを表示
-            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-                document.getElementById('touchControls').classList.remove('hidden');
-            }
         }
     }
     
@@ -984,9 +1042,6 @@ class Game {
         this.state = 'menu';
         this.failedScreen.classList.add('hidden');
         this.startScreen.classList.remove('hidden');
-        
-        // タッチコントロールを非表示
-        document.getElementById('touchControls').classList.add('hidden');
         
         // ゲームデータを初期化
         this.currentStage = 1;

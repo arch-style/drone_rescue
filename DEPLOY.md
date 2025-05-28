@@ -1,5 +1,11 @@
 # Cloudflare Pagesへのデプロイ手順
 
+## 🎮 デプロイ済みURL
+
+**https://drone-rescue.pages.dev/**
+
+現在、上記URLでゲームが公開されています。
+
 ## 前提条件
 - Cloudflareアカウントを持っていること
 - GitHubアカウントを持っていること（推奨）

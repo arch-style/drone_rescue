@@ -138,6 +138,64 @@ class Drone {
         this.y = Math.max(this.height / 2, Math.min(540, this.y));
     }
     
+    updateWithAnalogStick(deltaTime, stickPosition) {
+        if (this.isCrashing) {
+            // 墜落アニメーション
+            this.crashY += 300 * deltaTime;
+            this.y += this.crashY * deltaTime;
+            this.propellerSpeed = Math.max(0, this.propellerSpeed - 30 * deltaTime);
+            this.propellerAngle += this.propellerSpeed * deltaTime;
+            return;
+        }
+        
+        // アナログスティックの入力を加速度に変換
+        this.vx += stickPosition.x * this.acceleration * deltaTime;
+        this.vy += stickPosition.y * this.acceleration * deltaTime;
+        
+        // 向きの更新
+        if (stickPosition.x < -0.1) {
+            this.facing = -1;
+        } else if (stickPosition.x > 0.1) {
+            this.facing = 1;
+        }
+        
+        // 物理更新
+        this.updatePhysics(deltaTime);
+        
+        // バッテリー消費計算（update関数と同じロジック）
+        const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        const speedRatio = speed / this.maxSpeed;
+        
+        const speedConsumption = this.batteryDrainBase + (speedRatio * speedRatio * 6);
+        
+        let verticalConsumption = 1.0;
+        if (this.vy < 0) {
+            verticalConsumption = 1.0 + Math.abs(this.vy) / this.maxSpeed * 4.0;
+        } else if (this.vy > 0) {
+            verticalConsumption = 1.0 - Math.min(this.vy / this.maxSpeed * 0.5, 0.5);
+        }
+        
+        const passengerPenalty = 1 + (this.passengers.length * 0.6);
+        
+        const batteryDrain = speedConsumption * verticalConsumption * passengerPenalty;
+        
+        this.currentDrainRate = batteryDrain;
+        
+        this.battery -= batteryDrain * deltaTime;
+        this.battery = Math.max(0, this.battery);
+        
+        // プロペラアニメーション
+        this.propellerAngle += this.propellerSpeed * deltaTime;
+        
+        // バッテリー消費表示タイマー更新
+        if (this.showBatteryConsumption) {
+            this.batteryConsumptionTimer -= deltaTime;
+            if (this.batteryConsumptionTimer <= 0) {
+                this.showBatteryConsumption = false;
+            }
+        }
+    }
+    
     isNearGround() {
         return this.y > 500; // 地面に近い
     }
