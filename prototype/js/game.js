@@ -23,6 +23,9 @@ class Game {
         // デバイスに応じて操作説明を切り替え
         this.updateControlsDisplay();
         
+        // iOS Safariのアドレスバー対策
+        this.setupMobileOptimizations();
+        
         // スクロール関連
         this.camera = {
             x: 0,
@@ -1158,5 +1161,67 @@ class Game {
                 touchControls.style.display = 'none';
             }
         }
+        
+        // iOSでスタンドアロンモードでない場合はヒントを表示
+        if (this.isIOS() && !window.navigator.standalone) {
+            const hint = document.querySelector('.fullscreen-hint');
+            if (hint) {
+                hint.style.display = 'block';
+            }
+        }
+    }
+    
+    setupMobileOptimizations() {
+        // スクロールを無効化
+        document.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+        }, { passive: false });
+        
+        // ダブルタップでのズームを無効化
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (e) => {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+        
+        // iOS Safariでアドレスバーを隠す
+        if (this.isIOS()) {
+            // 初回読み込み時
+            window.scrollTo(0, 1);
+            
+            // 少し待ってから再度実行
+            setTimeout(() => {
+                window.scrollTo(0, 1);
+            }, 100);
+            
+            // orientationchangeイベントでも実行
+            window.addEventListener('orientationchange', () => {
+                setTimeout(() => {
+                    window.scrollTo(0, 1);
+                }, 100);
+            });
+        }
+        
+        // フルスクリーンAPIが利用可能な場合
+        if (document.documentElement.requestFullscreen) {
+            // タッチまたはクリックでフルスクリーン化を促す
+            const enterFullscreen = () => {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(err => {
+                        console.log('Fullscreen request failed:', err);
+                    });
+                }
+            };
+            
+            // ゲーム開始時にフルスクリーンを試みる
+            document.getElementById('startButton').addEventListener('click', enterFullscreen);
+        }
+    }
+    
+    isIOS() {
+        return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     }
 }
