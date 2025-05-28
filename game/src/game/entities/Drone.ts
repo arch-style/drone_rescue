@@ -1,5 +1,5 @@
 import { Container, Graphics, Text } from 'pixi.js'
-import { GameConfig } from '../../utils/GameConfig'
+import { GameConfig } from '../../utils/GameConfig.ts'
 
 export interface DroneStats {
   battery: number
@@ -62,25 +62,108 @@ export class Drone extends Container {
   private drawDrone(): void {
     this.body.clear()
     
-    // Simple drone shape (will be replaced with sprite later)
-    this.body.fill(0x4444ff)
-    this.body.roundRect(-20, -10, 40, 20, 5)
-    
-    // Propellers
-    this.body.fill(0x666666)
-    this.body.rect(-25, -15, 10, 3)
-    this.body.rect(15, -15, 10, 3)
-    
-    // Cabin window
     if (!this.isCrashing) {
-      this.body.fill(0x88ccff)
-      this.body.rect(-10, -5, 20, 10)
+      // Main body with gradient effect
+      this.body.fill({ color: 0x2196F3 })
+      this.body.roundRect(-25, -12, 50, 24, 12)
+      
+      // Body highlight
+      this.body.fill({ color: 0x42A5F5 })
+      this.body.roundRect(-23, -10, 46, 8, 6)
+      
+      // Cockpit window
+      this.body.fill({ color: 0x1976D2 })
+      this.body.beginPath()
+      this.body.moveTo(-15, -8)
+      this.body.lineTo(15, -8)
+      this.body.lineTo(12, 0)
+      this.body.lineTo(-12, 0)
+      this.body.closePath()
+      
+      // Window shine
+      this.body.fill({ color: 0x64B5F6, alpha: 0.6 })
+      this.body.beginPath()
+      this.body.moveTo(-10, -6)
+      this.body.lineTo(5, -6)
+      this.body.lineTo(3, -2)
+      this.body.lineTo(-8, -2)
+      this.body.closePath()
+      
+      // Propeller arms
+      this.body.fill({ color: 0x37474F })
+      this.body.rect(-30, -2, 8, 4)
+      this.body.rect(22, -2, 8, 4)
+      this.body.rect(-30, -16, 8, 4)
+      this.body.rect(22, -16, 8, 4)
+      
+      // Propellers (animated)
+      const propellerAngle = Date.now() * 0.02
+      this.body.fill({ color: 0x90A4AE, alpha: 0.8 })
+      
+      // Front left propeller
+      this.body.save()
+      this.body.translate(-26, -14)
+      this.body.rotate(propellerAngle)
+      this.body.rect(-12, -1, 24, 2)
+      this.body.rect(-1, -12, 2, 24)
+      this.body.restore()
+      
+      // Front right propeller
+      this.body.save()
+      this.body.translate(26, -14)
+      this.body.rotate(-propellerAngle)
+      this.body.rect(-12, -1, 24, 2)
+      this.body.rect(-1, -12, 2, 24)
+      this.body.restore()
+      
+      // Back left propeller
+      this.body.save()
+      this.body.translate(-26, 0)
+      this.body.rotate(-propellerAngle * 1.2)
+      this.body.rect(-12, -1, 24, 2)
+      this.body.rect(-1, -12, 2, 24)
+      this.body.restore()
+      
+      // Back right propeller
+      this.body.save()
+      this.body.translate(26, 0)
+      this.body.rotate(propellerAngle * 1.2)
+      this.body.rect(-12, -1, 24, 2)
+      this.body.rect(-1, -12, 2, 24)
+      this.body.restore()
+      
+      // Landing gear
+      this.body.stroke({ width: 2, color: 0x455A64 })
+      this.body.moveTo(-15, 12)
+      this.body.lineTo(-18, 16)
+      this.body.moveTo(15, 12)
+      this.body.lineTo(18, 16)
+      
+      // LED lights
+      this.body.fill({ color: 0xFF5252 })
+      this.body.circle(-20, 0, 2)
+      this.body.fill({ color: 0x4CAF50 })
+      this.body.circle(20, 0, 2)
+      
+      // Rescue hook attachment
+      this.body.fill({ color: 0x607D8B })
+      this.body.rect(-3, 10, 6, 4)
+    } else {
+      // Crashed drone
+      this.body.fill({ color: 0x616161 })
+      this.body.roundRect(-25, -12, 50, 24, 12)
+      
+      // Smoke effect
+      this.body.fill({ color: 0x424242, alpha: 0.7 })
+      this.body.circle(-10 + Math.random() * 20, -5 - Math.random() * 10, 5 + Math.random() * 3)
+      this.body.circle(-5 + Math.random() * 10, -8 - Math.random() * 10, 4 + Math.random() * 3)
     }
   }
 
   update(deltaTime: number, keys: Record<string, boolean>): void {
     if (this.isCrashing) {
       this.updateCrash(deltaTime)
+      this.drawDrone() // Redraw for smoke animation
       return
     }
     
@@ -98,6 +181,9 @@ export class Drone extends Container {
     
     // Update consumption display
     this.updateConsumptionDisplay(deltaTime)
+    
+    // Redraw drone for propeller animation
+    this.drawDrone()
   }
 
   private handleInput(keys: Record<string, boolean>, deltaTime: number): void {
@@ -165,13 +251,53 @@ export class Drone extends Container {
     this.ropeGraphics.clear()
     
     if (this.isRescuing && this.ropeLength > 0) {
-      this.ropeGraphics.stroke({ width: 2, color: 0x8B4513 })
-      this.ropeGraphics.moveTo(0, 10)
-      this.ropeGraphics.lineTo(0, 10 + this.ropeLength)
+      // Rope cable with gradient effect
+      this.ropeGraphics.stroke({ width: 3, color: 0x5D4037 })
+      this.ropeGraphics.moveTo(0, 14)
+      this.ropeGraphics.lineTo(0, 14 + this.ropeLength)
       
-      // Rope end
-      this.ropeGraphics.fill(0x444444)
-      this.ropeGraphics.circle(0, 10 + this.ropeLength, 5)
+      // Secondary rope line for depth
+      this.ropeGraphics.stroke({ width: 1, color: 0x8D6E63 })
+      this.ropeGraphics.moveTo(-1, 14)
+      this.ropeGraphics.lineTo(-1, 14 + this.ropeLength)
+      
+      // Ladder rungs
+      const rungSpacing = 15
+      const numRungs = Math.floor(this.ropeLength / rungSpacing)
+      
+      this.ropeGraphics.stroke({ width: 2, color: 0x6D4C41 })
+      for (let i = 1; i <= numRungs; i++) {
+        const y = 14 + i * rungSpacing
+        this.ropeGraphics.moveTo(-8, y)
+        this.ropeGraphics.lineTo(8, y)
+      }
+      
+      // Rope end hook
+      const endY = 14 + this.ropeLength
+      
+      // Hook base
+      this.ropeGraphics.fill({ color: 0x455A64 })
+      this.ropeGraphics.beginPath()
+      this.ropeGraphics.moveTo(-6, endY - 2)
+      this.ropeGraphics.lineTo(6, endY - 2)
+      this.ropeGraphics.lineTo(4, endY + 8)
+      this.ropeGraphics.lineTo(-4, endY + 8)
+      this.ropeGraphics.closePath()
+      
+      // Hook curve
+      this.ropeGraphics.stroke({ width: 3, color: 0x37474F })
+      this.ropeGraphics.beginPath()
+      this.ropeGraphics.moveTo(0, endY + 8)
+      this.ropeGraphics.bezierCurveTo(-8, endY + 12, -8, endY + 18, 0, endY + 16)
+      
+      // Hook point
+      this.ropeGraphics.fill({ color: 0x263238 })
+      this.ropeGraphics.circle(0, endY + 16, 3)
+      
+      // Rescue radius indicator (pulsing)
+      const pulse = Math.sin(Date.now() * 0.005) * 0.3 + 0.7
+      this.ropeGraphics.stroke({ width: 1, color: 0x4CAF50, alpha: pulse * 0.5 })
+      this.ropeGraphics.circle(0, endY, 30)
     }
   }
 

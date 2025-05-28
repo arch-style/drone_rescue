@@ -1,6 +1,7 @@
-import { Drone } from '../entities/Drone'
-import { Citizen } from '../entities/Citizen'
-import { Stage, ChargingPort } from '../Stage'
+import { Drone } from '../entities/Drone.ts'
+import { Citizen } from '../entities/Citizen.ts'
+import { Stage } from '../Stage.ts'
+import type { ChargingPort } from '../Stage.ts'
 
 export class CollisionSystem {
   

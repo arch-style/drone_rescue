@@ -107,10 +107,68 @@ class Game {
             this.keys[e.key] = false;
         });
         
-        // タッチ入力（将来の実装用）
-        this.canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            // タッチ操作の実装
+        // タッチコントロールの設定
+        this.setupTouchControls();
+        
+        // タッチデバイスの判定と表示
+        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+            document.getElementById('touchControls').classList.remove('hidden');
+        }
+    }
+    
+    setupTouchControls() {
+        const controls = document.querySelectorAll('.control-button');
+        
+        controls.forEach(button => {
+            const key = button.getAttribute('data-key');
+            
+            // タッチ開始
+            button.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                button.classList.add('active');
+                this.keys[key] = true;
+                
+                if (key === ' ' && this.state === 'playing') {
+                    this.handleRescueAction();
+                }
+            });
+            
+            // タッチ終了
+            button.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                button.classList.remove('active');
+                this.keys[key] = false;
+            });
+            
+            // タッチキャンセル
+            button.addEventListener('touchcancel', (e) => {
+                e.preventDefault();
+                button.classList.remove('active');
+                this.keys[key] = false;
+            });
+            
+            // マウスイベント（デバッグ用）
+            button.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                button.classList.add('active');
+                this.keys[key] = true;
+                
+                if (key === ' ' && this.state === 'playing') {
+                    this.handleRescueAction();
+                }
+            });
+            
+            button.addEventListener('mouseup', (e) => {
+                e.preventDefault();
+                button.classList.remove('active');
+                this.keys[key] = false;
+            });
+            
+            button.addEventListener('mouseleave', (e) => {
+                e.preventDefault();
+                button.classList.remove('active');
+                this.keys[key] = false;
+            });
         });
     }
     
@@ -125,6 +183,11 @@ class Game {
         this.startScreen.classList.add('hidden');
         this.gameOverScreen.classList.add('hidden');
         this.failedScreen.classList.add('hidden');
+        
+        // タッチコントロールを表示
+        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+            document.getElementById('touchControls').classList.remove('hidden');
+        }
         
         // BGM開始（既に再生中の場合は停止してから再開始）
         this.soundManager.stopBGM();
@@ -622,6 +685,9 @@ class Game {
             }
             
             this.failedScreen.classList.remove('hidden');
+            
+            // タッチコントロールを非表示
+            document.getElementById('touchControls').classList.add('hidden');
             return;
         } else {
             // ミッション成功
@@ -658,6 +724,9 @@ class Game {
         
         // ゲームオーバー画面表示
         this.gameOverScreen.classList.remove('hidden');
+        
+        // タッチコントロールを非表示
+        document.getElementById('touchControls').classList.add('hidden');
         
         // 3秒後にゲームオーバー画面を非表示にしてからアップグレード選択を表示
         setTimeout(() => {
@@ -902,6 +971,11 @@ class Game {
             // カメラをドローンに合わせる
             this.camera.x = this.drone.x - this.width / 2;
             this.camera.x = Math.max(0, Math.min(this.worldWidth - this.width, this.camera.x));
+            
+            // タッチコントロールを表示
+            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+                document.getElementById('touchControls').classList.remove('hidden');
+            }
         }
     }
     
@@ -910,6 +984,9 @@ class Game {
         this.state = 'menu';
         this.failedScreen.classList.add('hidden');
         this.startScreen.classList.remove('hidden');
+        
+        // タッチコントロールを非表示
+        document.getElementById('touchControls').classList.add('hidden');
         
         // ゲームデータを初期化
         this.currentStage = 1;

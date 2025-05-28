@@ -41,58 +41,132 @@ export class Citizen extends Container {
   private drawCitizen(): void {
     this.body.clear()
     
-    const color = this.state === CitizenState.RESCUED ? 0x4CAF50 : 0xFFA726
+    const isRescued = this.state === CitizenState.RESCUED
+    const baseColor = isRescued ? 0x4CAF50 : 0xFF6F00
     
-    // Body
-    this.body.fill(color)
-    this.body.circle(0, -10, 8)
+    // Shadow
+    this.body.fill({ color: 0x000000, alpha: 0.2 })
+    this.body.ellipse(0, 8, 10, 4)
     
-    // Simple body shape
+    // Head
+    this.body.fill({ color: 0xFFB074 })
+    this.body.circle(0, -12, 7)
+    
+    // Hair
+    this.body.fill({ color: 0x5D4037 })
+    this.body.beginPath()
+    this.body.arc(0, -12, 8, Math.PI, 0, true)
+    this.body.closePath()
+    
+    // Face details
+    // Eyes
+    this.body.fill({ color: 0x000000 })
+    this.body.circle(-2, -12, 1)
+    this.body.circle(2, -12, 1)
+    
+    // Mouth (happy when rescued)
+    if (isRescued) {
+      this.body.stroke({ width: 1, color: 0x000000 })
+      this.body.beginPath()
+      this.body.arc(0, -10, 3, 0, Math.PI, false)
+    }
+    
+    // Body/Shirt
+    this.body.fill({ color: baseColor })
+    this.body.beginPath()
     this.body.moveTo(-6, -5)
-    this.body.lineTo(-4, 5)
-    this.body.lineTo(4, 5)
+    this.body.lineTo(-5, 5)
+    this.body.lineTo(5, 5)
     this.body.lineTo(6, -5)
+    this.body.closePath()
+    
+    // Shirt detail
+    this.body.fill({ color: 0x000000, alpha: 0.2 })
+    this.body.rect(-1, -3, 2, 6)
+    
+    // Pants
+    this.body.fill({ color: 0x1565C0 })
+    this.body.beginPath()
+    this.body.moveTo(-5, 5)
+    this.body.lineTo(-4, 10)
+    this.body.lineTo(-1, 10)
+    this.body.lineTo(0, 5)
+    this.body.lineTo(1, 10)
+    this.body.lineTo(4, 10)
+    this.body.lineTo(5, 5)
     this.body.closePath()
     
     // Arms (waving animation for waiting citizens)
     if (this.state === CitizenState.WAITING) {
       const armAngle = Math.sin(this.animationTimer) * 0.5
+      const waveAngle = Math.sin(this.animationTimer * 2) * 0.3
       
       // Left arm
-      this.body.stroke({ width: 2, color: color })
-      this.body.moveTo(-5, -2)
-      this.body.lineTo(-8, 2 + armAngle * 5)
+      this.body.stroke({ width: 3, color: 0xFFB074 })
+      this.body.moveTo(-6, -2)
+      this.body.lineTo(-9, 2 + armAngle * 3)
       
       // Right arm (waving)
-      this.body.moveTo(5, -2)
-      this.body.lineTo(8 + armAngle * 3, -5 - armAngle * 8)
+      this.body.moveTo(6, -2)
+      this.body.lineTo(10 + waveAngle * 5, -8 - armAngle * 10)
+      
+      // Hand wave
+      this.body.fill({ color: 0xFFB074 })
+      this.body.circle(10 + waveAngle * 5, -8 - armAngle * 10, 3)
     } else {
       // Static arms
-      this.body.stroke({ width: 2, color: color })
-      this.body.moveTo(-5, -2)
-      this.body.lineTo(-7, 3)
-      this.body.moveTo(5, -2)
-      this.body.lineTo(7, 3)
+      this.body.stroke({ width: 3, color: 0xFFB074 })
+      this.body.moveTo(-6, -2)
+      this.body.lineTo(-8, 3)
+      this.body.moveTo(6, -2)
+      this.body.lineTo(8, 3)
+      
+      // Hands
+      this.body.fill({ color: 0xFFB074 })
+      this.body.circle(-8, 3, 2.5)
+      this.body.circle(8, 3, 2.5)
     }
+    
+    // Shoes
+    this.body.fill({ color: 0x424242 })
+    this.body.ellipse(-2.5, 11, 3, 2)
+    this.body.ellipse(2.5, 11, 3, 2)
     
     // Help indicator
     if (this.state === CitizenState.WAITING && !this.statusText) {
+      // Speech bubble background
+      const bubble = new Graphics()
+      bubble.fill({ color: 0xFFFFFF })
+      bubble.roundRect(-20, -40, 40, 20, 10)
+      bubble.fill({ color: 0xFFFFFF })
+      bubble.beginPath()
+      bubble.moveTo(-5, -20)
+      bubble.lineTo(0, -15)
+      bubble.lineTo(5, -20)
+      bubble.closePath()
+      this.addChild(bubble)
+      
       this.statusText = new Text({
         text: 'HELP!',
         style: {
           fontSize: 12,
           fill: 0xFF0000,
-          fontWeight: 'bold'
+          fontWeight: 'bold',
+          fontFamily: 'Arial'
         }
       })
-      this.statusText.x = -15
+      this.statusText.anchor.set(0.5)
+      this.statusText.x = 0
       this.statusText.y = -30
       this.addChild(this.statusText)
     } else if (this.state !== CitizenState.WAITING && this.statusText) {
-      this.removeChild(this.statusText)
+      // Remove bubble and text
+      this.removeChildren()
+      this.addChild(this.body)
       this.statusText = null
     }
   }
+
 
   update(deltaTime: number): void {
     // Waving animation

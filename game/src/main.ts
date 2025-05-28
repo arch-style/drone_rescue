@@ -1,5 +1,5 @@
 import './style.css'
-import { Game } from './game/Game'
+import { Game } from './game/Game.ts'
 
 // Hide loading screen after a short delay
 const hideLoading = () => {

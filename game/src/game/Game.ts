@@ -1,13 +1,15 @@
 import { Application, Container } from 'pixi.js'
-import { GameConfig } from '../utils/GameConfig'
-import { GameState, GameStateType } from './GameState'
-import { InputManager } from './InputManager'
-import { Stage } from './Stage'
-import { Camera } from './Camera'
-import { Drone } from './entities/Drone'
-import { Citizen, CitizenType } from './entities/Citizen'
-import { CollisionSystem } from './systems/CollisionSystem'
-import { HUD } from '../ui/HUD'
+import { GameConfig } from '../utils/GameConfig.ts'
+import { GameState, GameStateType } from './GameState.ts'
+import { InputManager } from './InputManager.ts'
+import { Stage } from './Stage.ts'
+import { Camera } from './Camera.ts'
+import { Drone } from './entities/Drone.ts'
+import { Citizen, CitizenType } from './entities/Citizen.ts'
+import { CollisionSystem } from './systems/CollisionSystem.ts'
+import { HUD } from '../ui/HUD.ts'
+import { StartScreen } from '../ui/StartScreen.ts'
+import { GameOverScreen } from '../ui/GameOverScreen.ts'
 
 export class Game {
   private app: Application
@@ -28,10 +30,13 @@ export class Game {
   
   // UI
   private hud: HUD
+  private startScreen: StartScreen
+  private gameOverScreen: GameOverScreen
   
   // Game properties
   private worldWidth: number = GameConfig.WORLD_WIDTH_BASE
   private lastTime: number = 0
+  private failureReason: string = ''
 
   constructor() {
     this.app = new Application()
@@ -43,6 +48,8 @@ export class Game {
     this.inputManager = new InputManager()
     this.camera = new Camera(this.worldWidth, GameConfig.GAME_HEIGHT)
     this.hud = new HUD()
+    this.startScreen = new StartScreen()
+    this.gameOverScreen = new GameOverScreen()
   }
 
   async init(): Promise<void> {
@@ -67,8 +74,19 @@ export class Game {
     this.gameContainer.addChild(this.uiContainer)
     this.app.stage.addChild(this.gameContainer)
     
-    // Add HUD to UI container
+    // Add UI elements to UI container
     this.uiContainer.addChild(this.hud)
+    this.uiContainer.addChild(this.startScreen)
+    this.uiContainer.addChild(this.gameOverScreen)
+    
+    // Setup UI callbacks
+    this.startScreen.setStartCallback(() => this.handleStartGame())
+    this.gameOverScreen.setContinueCallback(() => this.handleContinue())
+    this.gameOverScreen.setTitleCallback(() => this.handleReturnToTitle())
+    
+    // Initially hide game UI
+    this.hud.visible = false
+    this.gameOverScreen.visible = false
 
     // Handle resize
     window.addEventListener('resize', () => this.handleResize())
@@ -76,9 +94,6 @@ export class Game {
 
     this.isInitialized = true
     console.log('Game initialized successfully')
-    
-    // Start with a test stage
-    this.startNewStage()
   }
 
   private handleResize(): void {
@@ -224,7 +239,7 @@ export class Game {
         this.camera.follow(this.drone)
         
         // Check collisions and interactions
-        this.checkInteractions()
+        this.checkInteractions(deltaTime)
       }
       
       // Update citizens
@@ -272,13 +287,13 @@ export class Game {
     this.drone.showRopeConsumption()
   }
   
-  private checkInteractions(): void {
+  private checkInteractions(deltaTime: number): void {
     if (!this.drone || !this.stage) return
     
     // Rope rescue check
     if (this.drone.getIsRescuing()) {
       // Extend rope
-      this.drone.extendRope(GameConfig.DRONE.ROPE_SPEED, 1/60)
+      this.drone.extendRope(GameConfig.DRONE.ROPE_SPEED, deltaTime)
       
       // Check for citizen rescue
       const rescuableCitizen = CollisionSystem.checkRopeRescue(this.drone, this.citizens)
@@ -320,21 +335,97 @@ export class Game {
     
     // Check battery
     if (this.drone.getBattery() <= 0) {
+      this.failureReason = 'バッテリー切れで墜落しました'
       this.gameState.setState(GameStateType.FAILED)
-      console.log('Game Over: Battery depleted')
+      this.showGameOver()
     }
     
     // Check time limit
     if (stats.time >= GameConfig.STAGE.TIME_LIMIT) {
+      this.failureReason = '制限時間を超過しました'
       this.gameState.setState(GameStateType.FAILED)
-      console.log('Game Over: Time limit exceeded')
+      this.showGameOver()
     }
     
     // Check if all citizens rescued
     const waitingCitizens = this.citizens.filter(c => c.isWaiting())
-    if (waitingCitizens.length === 0 && this.drone.getPassengers().length === 0) {
+    const deliveredCount = this.citizens.filter(c => c.isDelivered()).length
+    
+    if (this.citizens.length > 0 && 
+        waitingCitizens.length === 0 && 
+        this.drone.getPassengers().length === 0 &&
+        deliveredCount === this.citizens.length) {
       this.gameState.setState(GameStateType.GAME_OVER)
-      console.log('Stage Complete!')
+      this.showStageClear()
+    }
+  }
+  
+  private showGameOver(): void {
+    const stats = this.gameState.getStats()
+    this.hud.visible = false
+    this.gameOverScreen.visible = true
+    this.gameOverScreen.showGameOver(stats, this.failureReason)
+  }
+  
+  private showStageClear(): void {
+    const stats = this.gameState.getStats()
+    const batteryPercent = this.drone!.getBattery() / 100
+    const timePercent = (GameConfig.STAGE.TIME_LIMIT - stats.time) / GameConfig.STAGE.TIME_LIMIT
+    const baseReward = 100
+    const reward = Math.floor(baseReward * (0.5 + batteryPercent * 0.25 + timePercent * 0.25))
+    
+    this.gameState.updateStats({ money: stats.money + reward })
+    
+    this.hud.visible = false
+    this.gameOverScreen.visible = true
+    this.gameOverScreen.showStageClear(stats, reward)
+  }
+  
+  private handleStartGame(): void {
+    this.startScreen.visible = false
+    this.hud.visible = true
+    this.gameState.reset()
+    this.startNewStage()
+  }
+  
+  private handleContinue(): void {
+    const stats = this.gameState.getStats()
+    const continueCost = 50 * Math.pow(2, stats.continueCount)
+    
+    if (this.gameState.doContinue(continueCost)) {
+      this.gameOverScreen.visible = false
+      this.hud.visible = true
+      
+      // Reset drone position and battery
+      if (this.drone && this.stage) {
+        const baseCenter = this.stage.getBaseCenter()
+        this.drone.x = baseCenter.x
+        this.drone.y = baseCenter.y - 50
+        this.drone.setBattery(50)
+      }
+      
+      this.gameState.setState(GameStateType.PLAYING)
+    }
+  }
+  
+  private handleReturnToTitle(): void {
+    // If game over (stage clear), go to next stage
+    if (this.gameState.getState() === GameStateType.GAME_OVER) {
+      this.gameOverScreen.visible = false
+      this.hud.visible = true
+      this.gameState.nextStage()
+      this.startNewStage()
+    } else {
+      // If failed, return to title
+      this.gameOverScreen.visible = false
+      this.startScreen.visible = true
+      this.gameState.reset()
+      
+      // Clear game objects
+      this.worldContainer.removeChildren()
+      this.stage = null
+      this.drone = null
+      this.citizens = []
     }
   }
 

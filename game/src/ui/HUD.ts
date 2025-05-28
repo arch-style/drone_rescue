@@ -1,6 +1,6 @@
 import { Container, Graphics, Text, TextStyle } from 'pixi.js'
-import { GameConfig } from '../utils/GameConfig'
-import { GameStats } from '../game/GameState'
+import { GameConfig } from '../utils/GameConfig.ts'
+import type { GameStats } from '../game/GameState.ts'
 
 export class HUD extends Container {
   private batteryBar: Graphics
@@ -20,7 +20,7 @@ export class HUD extends Container {
     
     // Create background for top bar
     this.backgroundBar = new Graphics()
-    this.backgroundBar.fill(0x000000, 0.5)
+    this.backgroundBar.fill({ color: 0x000000, alpha: 0.5 })
     this.backgroundBar.rect(0, 0, GameConfig.GAME_WIDTH, 60)
     this.addChild(this.backgroundBar)
     
@@ -53,7 +53,7 @@ export class HUD extends Container {
 
   private setupUI(): void {
     // Battery bar background
-    this.batteryBar.fill(0x333333)
+    this.batteryBar.fill({ color: 0x333333 })
     this.batteryBar.rect(10, 10, GameConfig.GAME_WIDTH - 20, 20)
     this.addChild(this.batteryBar)
     
@@ -100,7 +100,7 @@ export class HUD extends Container {
     // Update battery fill
     this.batteryFill.clear()
     const fillColor = percent < 20 ? 0xFF0000 : percent < 50 ? 0xFFAA00 : 0x00FF00
-    this.batteryFill.fill(fillColor)
+    this.batteryFill.fill({ color: fillColor })
     this.batteryFill.rect(
       12, 
       12, 

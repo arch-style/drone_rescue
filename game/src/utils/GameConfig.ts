@@ -8,7 +8,7 @@ export const GameConfig = {
   WORLD_WIDTH_INCREMENT: 400, // Per stage
   
   // Physics
-  GRAVITY: 0.3,
+  GRAVITY: 0,
   
   // Drone settings
   DRONE: {

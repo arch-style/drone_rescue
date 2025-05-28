@@ -1,5 +1,5 @@
 import { Container } from 'pixi.js'
-import { GameConfig } from '../utils/GameConfig'
+import { GameConfig } from '../utils/GameConfig.ts'
 
 export class Camera {
   private x: number = 0
