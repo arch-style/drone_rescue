@@ -102,3 +102,34 @@ prototype/
 3. **ブラウザ互換性**: Chrome, Firefox, Safari での動作確認
 4. **レスポンシブ対応**: 画面サイズに応じたCanvas調整
 5. **サウンド**: ユーザー操作後に音声を初期化（ブラウザ制限対応）
+
+## デプロイ手順
+
+修正後は以下の手順でデプロイを行う：
+
+1. **バージョン番号の更新**
+   - game.js内のバージョン番号を更新（例: 0.0.8 → 0.0.9）
+
+2. **GitHub連携デプロイ（推奨）**
+   ```bash
+   git add .
+   git commit -m "修正内容の説明 v0.0.9"
+   git push origin main
+   ```
+   - Cloudflare Pagesが自動的に再デプロイ
+
+3. **Direct Uploadデプロイ（代替方法）**
+   - Cloudflare Pagesダッシュボードにアクセス
+   - プロジェクトを選択
+   - 「Create new deployment」をクリック
+   - prototypeフォルダ内の全ファイルをアップロード
+
+4. **デプロイ確認**
+   - https://drone-rescue.pages.dev/ でゲームの動作確認
+   - 特にモバイル（iOS Safari）での動作確認
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.

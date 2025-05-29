@@ -55,7 +55,7 @@ class UpgradeSystem {
             batteryEfficiency: 0.9, // 10%ずつ消費減少（半分に調整）
             maxCapacity: 1,       // 1人ずつ増加（特別処理）
             ropeSpeed: 1.3,       // 30%ずつ上昇
-            ropeLength: 2.0,      // 100%ずつ上昇
+            ropeLength: 1.5,      // 50%ずつ上昇
             ropeBatteryEfficiency: 0.85 // 15%ずつ消費減少（半分に調整）
         };
     }

@@ -4,7 +4,7 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         
         // バージョン情報
-        this.version = '1.0.8';
+        this.version = '0.0.9';
         
         // アップグレードシステム
         this.upgradeSystem = new UpgradeSystem();
@@ -772,6 +772,7 @@ class Game {
         
         this.ctx.font = 'bold 20px Arial';
         this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
         
         // 左側の表示（UIと重ならないように位置調整）
         let leftY = 120; // 上部UIの下から開始
@@ -786,7 +787,7 @@ class Game {
             this.ctx.lineTo(35, leftY + 40);
             this.ctx.closePath();
             this.ctx.fill();
-            this.ctx.fillText(leftCount.toString(), 40, leftY + 50);
+            this.ctx.fillText(leftCount.toString(), 40, leftY + 30);
             leftY += 70;
         }
         
@@ -803,7 +804,7 @@ class Game {
             this.ctx.lineTo(35, leftY + 40);
             this.ctx.closePath();
             this.ctx.fill();
-            this.ctx.fillText('H', 40, leftY + 50);
+            this.ctx.fillText('H', 40, leftY + 30);
             leftY += 70;
         }
         
@@ -819,7 +820,7 @@ class Game {
             this.ctx.lineTo(35, leftY + 40);
             this.ctx.closePath();
             this.ctx.fill();
-            this.ctx.fillText('⚡', 40, leftY + 50);
+            this.ctx.fillText('⚡', 40, leftY + 30);
         }
         
         // 右側の表示（UIと重ならないように位置調整）
@@ -835,7 +836,7 @@ class Game {
             this.ctx.lineTo(this.width - 35, rightY + 40);
             this.ctx.closePath();
             this.ctx.fill();
-            this.ctx.fillText(rightCount.toString(), this.width - 40, rightY + 50);
+            this.ctx.fillText(rightCount.toString(), this.width - 40, rightY + 30);
             rightY += 70;
         }
         
@@ -851,7 +852,7 @@ class Game {
             this.ctx.lineTo(this.width - 35, rightY + 40);
             this.ctx.closePath();
             this.ctx.fill();
-            this.ctx.fillText('H', this.width - 40, rightY + 50);
+            this.ctx.fillText('H', this.width - 40, rightY + 30);
             rightY += 70;
         }
         
@@ -867,7 +868,7 @@ class Game {
             this.ctx.lineTo(this.width - 35, rightY + 40);
             this.ctx.closePath();
             this.ctx.fill();
-            this.ctx.fillText('⚡', this.width - 40, rightY + 50);
+            this.ctx.fillText('⚡', this.width - 40, rightY + 30);
         }
     }
     

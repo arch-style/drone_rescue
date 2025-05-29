@@ -220,7 +220,7 @@ class Drone {
             ctx.fillStyle = `rgba(0, 0, 0, ${shadowOpacity})`;
             ctx.beginPath();
             // 影の高さ2つ分下に配置
-            ctx.ellipse(this.x, groundLevel - 26, this.width/2 * shadowScale, 8 * shadowScale, 0, 0, Math.PI * 2);
+            ctx.ellipse(this.x, groundLevel + 13, this.width/2 * shadowScale, 8 * shadowScale, 0, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
         }

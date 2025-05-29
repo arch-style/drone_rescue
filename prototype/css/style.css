@@ -139,8 +139,8 @@ body {
 }
 
 #topBar {
-    position: fixed;
-    top: 10px;
+    position: absolute;
+    top: 50px;
     left: 10px;
     right: 10px;
     display: flex;
@@ -151,7 +151,7 @@ body {
     font-size: 12px;
     justify-content: center;
     z-index: 50;
-    max-width: calc(100vw - 20px);
+    max-width: calc(100% - 20px);
     box-sizing: border-box;
 }
 
