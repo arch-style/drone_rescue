@@ -22,6 +22,10 @@ class Citizen {
         
         // 感情表現
         this.emotion = 'waiting'; // waiting, happy, rescued
+        
+        // プレゼント所持（8%の確率）
+        this.hasPresent = Math.random() < 0.08;
+        this.presentType = this.hasPresent ? (Math.random() < 0.6 ? 'yellow' : 'blue') : null; // 60%黄色、40%青
     }
     
     update(deltaTime) {
@@ -95,6 +99,11 @@ class Citizen {
             ctx.lineTo(10, -10);
             ctx.stroke();
             ctx.restore();
+        }
+        
+        // プレゼント表示
+        if (this.hasPresent && !this.delivered) {
+            this.renderPresent(ctx);
         }
         
         // 救助を求める吹き出し
@@ -181,6 +190,48 @@ class Citizen {
         ctx.font = 'bold 10px Arial';
         ctx.textAlign = 'center';
         ctx.fillText('HELP!', 0, bubbleY - 7);
+        
+        ctx.restore();
+    }
+    
+    renderPresent(ctx) {
+        const presentY = this.type === 'roof' ? -this.height - 25 : -this.height - 20;
+        const bobbing = Math.sin(this.animationTimer * 2) * 2;
+        
+        ctx.save();
+        ctx.translate(0, presentY + bobbing);
+        
+        // プレゼントボックス
+        const size = 16;
+        ctx.fillStyle = this.presentType === 'yellow' ? '#FFD700' : '#4169E1';
+        ctx.fillRect(-size/2, -size/2, size, size);
+        
+        // リボン
+        ctx.strokeStyle = this.presentType === 'yellow' ? '#FF6B6B' : '#FFD700';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-size/2, 0);
+        ctx.lineTo(size/2, 0);
+        ctx.moveTo(0, -size/2);
+        ctx.lineTo(0, size/2);
+        ctx.stroke();
+        
+        // リボンの結び目
+        ctx.beginPath();
+        ctx.arc(0, 0, 3, 0, Math.PI * 2);
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.fill();
+        
+        // キラキラエフェクト
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        for (let i = 0; i < 3; i++) {
+            const angle = (this.animationTimer * 2 + i * 2.09) % (Math.PI * 2);
+            const sparkX = Math.cos(angle) * (size * 0.8);
+            const sparkY = Math.sin(angle) * (size * 0.8);
+            ctx.beginPath();
+            ctx.arc(sparkX, sparkY, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
         
         ctx.restore();
     }

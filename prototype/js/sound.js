@@ -162,6 +162,12 @@ class SoundManager {
     playBGM() {
         if (!this.enabled || !this.audioContext) return;
         
+        // 既にBGMが再生中の場合は停止
+        this.stopBGM();
+        
+        // BGMインスタンスフラグを設定
+        this.bgmInstance = true;
+        
         // シンプルなBGMパターンを生成
         const playNote = (frequency, time, duration) => {
             const oscillator = this.audioContext.createOscillator();
@@ -184,7 +190,7 @@ class SoundManager {
         
         // BGMループ
         const loop = () => {
-            if (!this.enabled) return;
+            if (!this.enabled || !this.bgmInstance) return;
             
             const now = this.audioContext.currentTime;
             const tempo = 0.5 / this.bgmSpeed; // 速度を反映したテンポ
@@ -217,6 +223,7 @@ class SoundManager {
             clearTimeout(this.bgmTimeout);
             this.bgmTimeout = null;
         }
+        this.bgmInstance = false;
     }
     
     // 効果音を再生

@@ -56,7 +56,22 @@ class UpgradeSystem {
             maxCapacity: 1,       // 1人ずつ増加（特別処理）
             ropeSpeed: 1.3,       // 30%ずつ上昇
             ropeLength: 1.5,      // 50%ずつ上昇
-            ropeBatteryEfficiency: 0.85 // 15%ずつ消費減少（半分に調整）
+            ropeBatteryEfficiency: 0.85, // 15%ずつ消費減少（半分に調整）
+            // デバッグ用の追加倍率
+            batteryCapacity: 1.2, // バッテリー容量
+            speed: 1.15,          // 移動速度
+            charge: 1.3,          // 充電速度
+            efficiency: 0.8,      // 省エネ効率
+            capacityBonus: 2      // 収容能力ボーナス
+        };
+        
+        // ステージ進行設定
+        this.stageSettings = {
+            worldExpansionRate: 1.15,  // ワールド拡大率
+            citizenBase: 5,            // 市民増加基準
+            citizenIncrease: 2,        // 市民増加率
+            chargeDecreaseRate: 0.9,   // 充電ポート減少率
+            batteryDrainIncrease: 0.03 // バッテリー消費増加
         };
     }
     

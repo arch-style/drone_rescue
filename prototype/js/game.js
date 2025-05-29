@@ -4,7 +4,7 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         
         // バージョン情報
-        this.version = '0.0.10';
+        this.version = '0.0.11';
         
         // アップグレードシステム
         this.upgradeSystem = new UpgradeSystem();
@@ -50,6 +50,7 @@ class Game {
         this.currentStage = 1; // 現在のステージ番号
         this.continueCount = 0; // コンティニュー回数
         this.totalRescued = 0; // 総救助人数
+        this.debugWindowOpen = false; // デバッグウィンドウの状態
         
         // ゲームオブジェクト
         this.drone = null;
@@ -133,10 +134,22 @@ class Game {
     setupInput() {
         // キーボード入力
         window.addEventListener('keydown', (e) => {
+            // デバッグウインドウのトグル（Ctrl+Shift+D）
+            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                e.preventDefault();
+                this.toggleDebugWindow();
+                return;
+            }
+            
+            // デバッグウィンドウが開いている場合は、デバッグウィンドウ内の入力を優先
+            if (this.debugWindowOpen && (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON')) {
+                return;
+            }
+            
             this.keys[e.key] = true;
             
             // スペースキー処理
-            if (e.key === ' ' && this.state === 'playing') {
+            if (e.key === ' ' && this.state === 'playing' && !this.debugWindowOpen) {
                 e.preventDefault();
                 this.handleRescueAction();
             }
@@ -148,6 +161,9 @@ class Game {
         
         // タッチコントロールの設定
         this.setupTouchControls();
+        
+        // デバッグウインドウの設定
+        this.setupDebugWindow();
     }
     
     setupTouchControls() {
@@ -312,12 +328,12 @@ class Game {
     }
     
     initializeGame() {
-        // ステージに応じてワールドサイズを拡大（拡大量は半分ずつ減少）
-        let expansion = 0;
-        for (let i = 1; i < this.currentStage; i++) {
-            expansion += 400 / Math.pow(2, i - 1); // 400, 200, 100, 50...
-        }
-        this.worldWidth = 1600 + expansion;
+        // 前回の救助メッセージをクリア
+        this.rescueMessage = null;
+        this.presentMessages = [];
+        
+        // ステージに応じてワールドサイズを拡大
+        this.worldWidth = 1600 * Math.pow(this.upgradeSystem.stageSettings.worldExpansionRate, this.currentStage - 1);
         
         // ステージ初期化（ワールドサイズを渡す）
         this.stage = new Stage(this.worldWidth, this.height, this.currentStage);
@@ -329,8 +345,11 @@ class Game {
         // アップグレードを適用
         this.upgradeSystem.applyUpgrades(this.drone, this);
         
-        // 充電ポートの充電量をステージに応じて設定（大幅に増加）
-        const baseChargeAmount = 50 - Math.min(this.currentStage * 3, 25); // 基本50%から段階的に減少
+        // ステージに応じたバッテリー消費率の増加
+        this.drone.batteryDrainBase += (this.currentStage - 1) * this.upgradeSystem.stageSettings.batteryDrainIncrease;
+        
+        // 充電ポートの充電量をステージに応じて設定
+        const baseChargeAmount = 50 * Math.pow(this.upgradeSystem.stageSettings.chargeDecreaseRate, this.currentStage - 1);
         this.stage.chargingPort.chargeAmount = Math.max(baseChargeAmount, 25); // 最低25%は保証
         this.stage.chargingPort.used = false;
         
@@ -340,8 +359,9 @@ class Game {
     }
     
     generateCitizens() {
-        // 救助者数（ステージごとに1人ずつ増加、最初は5人）
-        const citizenCount = 5 + (this.currentStage - 1);
+        // 救助者数
+        const citizenCount = this.upgradeSystem.stageSettings.citizenBase + 
+                           (this.currentStage - 1) * this.upgradeSystem.stageSettings.citizenIncrease;
         
         // 地上と屋上の比率
         const roofRatio = Math.min(0.3 + (this.currentStage - 1) * 0.1, 0.7);
@@ -358,14 +378,35 @@ class Game {
             const maxAttempts = 100;
             
             while (!placed && attempts < maxAttempts) {
-                // ホームポイントの左右にランダムに配置
+                // ホームポイントの左右にランダムに配置（画面内に収まるように）
                 let x;
-                if (Math.random() < 0.3) {
-                    // 30%の確率でホームポイントの左側
-                    x = Math.random() * (homeX - 100) + 50;
+                const screenMargin = 100; // 画面端からの最小距離
+                const leftMin = Math.max(screenMargin, this.camera.x + screenMargin);
+                const rightMax = Math.min(this.worldWidth - screenMargin, this.camera.x + this.width - screenMargin);
+                
+                // ホームポイントから離れた場所に配置（最低200ピクセル離す）
+                const homeBuffer = 200;
+                
+                if (Math.random() < 0.5) {
+                    // 50%の確率でホームポイントの左側（十分離れた位置）
+                    const leftMax = Math.min(homeX - homeBuffer, rightMax);
+                    if (leftMax > leftMin) {
+                        x = Math.random() * (leftMax - leftMin) + leftMin;
+                    } else {
+                        // 左側に十分なスペースがない場合は右側へ
+                        const rightMin = Math.max(homeX + homeBuffer, leftMin);
+                        x = Math.random() * (rightMax - rightMin) + rightMin;
+                    }
                 } else {
-                    // 70%の確率でホームポイントの右側
-                    x = Math.random() * (this.worldWidth - homeX - 100) + homeX + 50;
+                    // 50%の確率でホームポイントの右側（十分離れた位置）
+                    const rightMin = Math.max(homeX + homeBuffer, leftMin);
+                    if (rightMin < rightMax) {
+                        x = Math.random() * (rightMax - rightMin) + rightMin;
+                    } else {
+                        // 右側に十分なスペースがない場合は左側へ
+                        const leftMax = Math.min(homeX - homeBuffer, rightMax);
+                        x = Math.random() * (leftMax - leftMin) + leftMin;
+                    }
                 }
                 
                 // 他の市民との重なりをチェック（キャラクター半分以上離れているか）
@@ -496,9 +537,87 @@ class Game {
     
     dropOffPassengers() {
         const droppedCount = this.drone.passengers.length;
+        let presentMessages = [];
+        
         this.drone.passengers.forEach(citizen => {
             citizen.delivered = true;
+            
+            // プレゼント効果の処理
+            if (citizen.hasPresent) {
+                if (citizen.presentType === 'yellow') {
+                    // 黄色プレゼント: バッテリー回復またはお金（ステージに応じて効果上昇）
+                    const stageMultiplier = 0.5 + (this.currentStage - 1) * 0.5; // ステージ1: 0.5倍, ステージ2: 1倍, ステージ3: 1.5倍...
+                    
+                    if (Math.random() < 0.5) {
+                        // バッテリー回復（10%, 20%, 30%, 5%で60%大当たり）
+                        let recoveryAmount;
+                        let isJackpot = false;
+                        const rand = Math.random();
+                        
+                        if (rand < 0.05) {
+                            // 5%の確率で大当たり！
+                            recoveryAmount = 60;
+                            isJackpot = true;
+                        } else if (rand < 0.35) {
+                            // 30%の確率で10%回復
+                            recoveryAmount = 10;
+                        } else if (rand < 0.65) {
+                            // 30%の確率で20%回復
+                            recoveryAmount = 20;
+                        } else {
+                            // 35%の確率で30%回復
+                            recoveryAmount = 30;
+                        }
+                        
+                        this.drone.battery = Math.min(100, this.drone.battery + recoveryAmount);
+                        
+                        if (isJackpot) {
+                            presentMessages.push(`🎉 大当たり！バッテリー${recoveryAmount}%回復！🎉`);
+                            this.soundManager.play('stageClear');
+                        } else {
+                            presentMessages.push(`🎁 バッテリー${recoveryAmount}%回復！`);
+                            this.soundManager.play('powerUp');
+                        }
+                    } else {
+                        // お金獲得（$5, $10, $15, 5%で$100大当たり）
+                        let moneyAmount;
+                        let isJackpot = false;
+                        const rand = Math.random();
+                        
+                        if (rand < 0.05) {
+                            // 5%の確率で大当たり！
+                            moneyAmount = 100;
+                            isJackpot = true;
+                        } else if (rand < 0.35) {
+                            // 30%の確率で$5
+                            moneyAmount = 5;
+                        } else if (rand < 0.65) {
+                            // 30%の確率で$10
+                            moneyAmount = 10;
+                        } else {
+                            // 35%の確率で$15
+                            moneyAmount = 15;
+                        }
+                        
+                        this.upgradeSystem.money += moneyAmount;
+                        
+                        if (isJackpot) {
+                            presentMessages.push(`💰 大当たり！$${moneyAmount}獲得！💰`);
+                            this.soundManager.play('stageClear');
+                        } else {
+                            presentMessages.push(`🎁 $${moneyAmount}獲得！`);
+                            this.soundManager.play('coin');
+                        }
+                    }
+                } else if (citizen.presentType === 'blue') {
+                    // 青プレゼント: ランダムパワーアップ
+                    this.applyRandomPowerUp();
+                    presentMessages.push(`🎁 特殊パワーアップ発動！`);
+                    this.soundManager.play('powerUp');
+                }
+            }
         });
+        
         this.drone.passengers = [];
         this.rescuedCount += droppedCount;
         this.totalRescued += droppedCount; // 総救助人数を更新
@@ -509,6 +628,13 @@ class Game {
         if (droppedCount > 0) {
             this.showRescueMessage(droppedCount);
         }
+        
+        // プレゼント効果表示（上方向に積み上げて表示）
+        presentMessages.forEach((message, index) => {
+            setTimeout(() => {
+                this.showPresentMessage(message, index);
+            }, index * 500); // 0.5秒ずつずらして表示
+        });
     }
     
     showRescueMessage(count) {
@@ -518,6 +644,88 @@ class Game {
             x: this.stage.baseX + this.stage.baseWidth / 2,
             y: this.stage.baseY - this.stage.baseHeight - 60
         };
+    }
+    
+    showPresentMessage(text, index = 0) {
+        if (!this.presentMessages) {
+            this.presentMessages = [];
+        }
+        
+        // 表示位置を上方向にずらす（各メッセージ80ピクセルずつ上に）
+        const baseY = this.height / 2;
+        const offsetY = index * 80;
+        
+        this.presentMessages.push({
+            text: text,
+            timer: 3.0, // 3秒間表示
+            x: this.width / 2,
+            y: baseY - offsetY,
+            scale: 0
+        });
+    }
+    
+    applyRandomPowerUp() {
+        // アップグレードシステムから利用可能なアップグレードを取得
+        const availableUpgrades = Object.keys(this.upgradeSystem.levels).filter(key => 
+            this.upgradeSystem.canUpgrade(key)
+        );
+        
+        if (availableUpgrades.length === 0) {
+            // アップグレード可能なものがない場合は、代わりに一時的なボーナスを付与
+            this.showPresentMessage('🎁 最大レベルです！バッテリー全回復！');
+            this.drone.battery = 100;
+            return;
+        }
+        
+        // ランダムで1つのアップグレードを選択
+        const selectedUpgrade = availableUpgrades[Math.floor(Math.random() * availableUpgrades.length)];
+        
+        // アップグレードを実際に購入（無料で）
+        this.upgradeSystem.levels[selectedUpgrade]++;
+        
+        // アップグレード効果を即座に適用
+        this.upgradeSystem.applyUpgrades(this.drone, this);
+        
+        // ステージに応じたバッテリー消費率を再計算
+        this.drone.batteryDrainBase += (this.currentStage - 1) * this.upgradeSystem.stageSettings.batteryDrainIncrease;
+        
+        // アップグレード名を取得
+        const upgradeName = this.upgradeSystem.descriptions[selectedUpgrade] || selectedUpgrade;
+        
+        // 詳細メッセージを追加
+        setTimeout(() => {
+            this.showPresentMessage(`🔧 ${upgradeName} レベルアップ！`);
+        }, 1000);
+    }
+    
+    applyTemporaryPowerUps() {
+        if (!this.temporaryPowerUps || !this.drone) return;
+        
+        // 一時的なパワーアップ効果をリセット
+        this.temporaryBoosts = {
+            speed: 1,
+            efficiency: 1,
+            capacity: 0,
+            charge: 1
+        };
+        
+        // アクティブなパワーアップを適用
+        this.temporaryPowerUps.forEach(powerUp => {
+            switch (powerUp.type) {
+                case 'speed':
+                    this.temporaryBoosts.speed = 1.5; // 50%速度アップ
+                    break;
+                case 'efficiency':
+                    this.temporaryBoosts.efficiency = 0.5; // バッテリー消費50%減
+                    break;
+                case 'capacity':
+                    this.temporaryBoosts.capacity = 3; // 収容人数+3
+                    break;
+                case 'charge':
+                    this.temporaryBoosts.charge = 2; // 充電速度2倍
+                    break;
+            }
+        });
     }
     
     update(deltaTime) {
@@ -535,6 +743,29 @@ class Game {
             if (this.rescueMessage.timer <= 0) {
                 this.rescueMessage = null;
             }
+        }
+        
+        // プレゼントメッセージ更新
+        if (this.presentMessages) {
+            this.presentMessages = this.presentMessages.filter(message => {
+                message.timer -= deltaTime;
+                // スケールアニメーション
+                if (message.scale < 1) {
+                    message.scale = Math.min(1, message.scale + deltaTime * 5);
+                }
+                return message.timer > 0;
+            });
+        }
+        
+        // 一時的なパワーアップの期限チェック
+        if (this.temporaryPowerUps) {
+            this.temporaryPowerUps = this.temporaryPowerUps.filter(powerUp => {
+                const elapsed = this.time - powerUp.startTime;
+                return elapsed < powerUp.duration;
+            });
+            
+            // パワーアップ効果を再適用
+            this.applyTemporaryPowerUps();
         }
         
         // カメラ更新（ドローンを中心に）
@@ -628,20 +859,65 @@ class Game {
             }
         }
         
-        // 残り時間に応じてBGM変更
+        // BGM速度変更（残り時間とバッテリーによる緊迫感演出）
         const remainingTime = this.timeLimit - this.time;
-        if (remainingTime <= 10 && this.soundManager.bgmSpeed !== 2.0) {
-            // 残り10秒：速度2.0倍、キー2つ上げる
-            this.soundManager.setBGMSpeed(2.0);
-            this.soundManager.setBGMKey(2);
-            this.soundManager.stopBGM();
-            this.soundManager.playBGM();
-        } else if (remainingTime <= 30 && remainingTime > 10 && this.soundManager.bgmSpeed !== 1.5) {
-            // 残り30秒：速度1.5倍、キー1つ上げる
-            this.soundManager.setBGMSpeed(1.5);
-            this.soundManager.setBGMKey(1);
-            this.soundManager.stopBGM();
-            this.soundManager.playBGM();
+        const batteryPercent = this.drone ? this.drone.battery : 100;
+        let speedMultiplier = 1.0;
+        let keyShift = 0;
+        let urgencyLevel = 0;
+        
+        // 残り時間による緊迫感
+        if (remainingTime <= 60) urgencyLevel += 1;
+        if (remainingTime <= 30) urgencyLevel += 1;
+        if (remainingTime <= 10) urgencyLevel += 1;
+        
+        // バッテリー残量による緊迫感
+        if (batteryPercent <= 30) urgencyLevel += 1;
+        if (batteryPercent <= 20) urgencyLevel += 1;
+        if (batteryPercent <= 10) urgencyLevel += 1;
+        
+        // 緊迫感レベルに応じてBGM調整
+        switch(urgencyLevel) {
+            case 0:
+                speedMultiplier = 1.0;
+                keyShift = 0;
+                break;
+            case 1:
+                speedMultiplier = 1.1;
+                keyShift = 0;
+                break;
+            case 2:
+                speedMultiplier = 1.25;
+                keyShift = 1;
+                break;
+            case 3:
+                speedMultiplier = 1.4;
+                keyShift = 1;
+                break;
+            case 4:
+                speedMultiplier = 1.6;
+                keyShift = 2;
+                break;
+            case 5:
+                speedMultiplier = 1.8;
+                keyShift = 2;
+                break;
+            case 6:
+                speedMultiplier = 2.0;
+                keyShift = 3;
+                break;
+        }
+        
+        // BGM設定が変わった場合のみ更新
+        if (!this.lastUrgencyLevel || this.lastUrgencyLevel !== urgencyLevel) {
+            this.lastUrgencyLevel = urgencyLevel;
+            this.soundManager.setBGMSpeed(speedMultiplier);
+            this.soundManager.setBGMKey(keyShift);
+            // BGMの再生状態を確認してから再開
+            if (this.soundManager.bgmInstance) {
+                this.soundManager.stopBGM();
+                this.soundManager.playBGM();
+            }
         }
         
         // 制限時間チェック
@@ -751,11 +1027,51 @@ class Game {
         // ホームポイント上空でのサイン表示
         this.renderDropOffSign();
         
+        // プレゼントメッセージ表示
+        this.renderPresentMessages();
+        
         // ゲームオーバー時のオーバーレイ
         if (this.state === 'gameover' || this.state === 'failed') {
             this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
             this.ctx.fillRect(0, 0, this.width, this.height);
         }
+    }
+    
+    renderPresentMessages() {
+        if (!this.presentMessages || this.presentMessages.length === 0) return;
+        
+        this.ctx.save();
+        
+        this.presentMessages.forEach(message => {
+            this.ctx.save();
+            this.ctx.translate(message.x, message.y);
+            
+            // スケールアニメーション
+            this.ctx.scale(message.scale, message.scale);
+            
+            // 透明度（最後の1秒でフェードアウト）
+            const alpha = message.timer < 1 ? message.timer : 1;
+            
+            // 背景
+            this.ctx.fillStyle = `rgba(0, 0, 0, ${alpha * 0.8})`;
+            this.ctx.fillRect(-150, -30, 300, 60);
+            
+            // 縁取り
+            this.ctx.strokeStyle = `rgba(255, 215, 0, ${alpha})`;
+            this.ctx.lineWidth = 3;
+            this.ctx.strokeRect(-150, -30, 300, 60);
+            
+            // テキスト
+            this.ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+            this.ctx.font = 'bold 24px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText(message.text, 0, 0);
+            
+            this.ctx.restore();
+        });
+        
+        this.ctx.restore();
     }
     
     // 画面外インジケーター: 画面外にある重要な要素（市民、基地、充電ポート）の方向と数を示す表示
@@ -1085,9 +1401,9 @@ class Game {
                 
                 this.soundManager.play('powerup');
                 this.purchaseUpgrade(upgrade);
-                modal.classList.add('hidden');
-                // 次のステージへ
-                this.nextStage();
+                
+                // アップグレード画面を更新（複数購入可能）
+                this.showUpgradeSelection();
             });
             
             choicesContainer.appendChild(card);
@@ -1441,5 +1757,219 @@ class Game {
         versionElement.textContent = `v${this.version}`;
         
         startScreen.appendChild(versionElement);
+    }
+    
+    toggleDebugWindow() {
+        const debugWindow = document.getElementById('debugWindow');
+        debugWindow.classList.toggle('hidden');
+        
+        if (!debugWindow.classList.contains('hidden')) {
+            this.updateDebugDisplay();
+            // デバッグウィンドウが開いているときはゲームの入力を無効化
+            this.debugWindowOpen = true;
+        } else {
+            this.debugWindowOpen = false;
+        }
+    }
+    
+    setupDebugWindow() {
+        const debugClose = document.getElementById('debugClose');
+        debugClose.addEventListener('click', () => {
+            document.getElementById('debugWindow').classList.add('hidden');
+        });
+        
+        // アップグレード効果倍率の設定
+        this.setupDebugSlider('batteryCapacityMultiplier', 'batteryCapacityValue', (value) => {
+            this.upgradeSystem.effectMultipliers.batteryCapacity = parseFloat(value);
+            this.applyDebugChanges();
+        });
+        
+        this.setupDebugSlider('speedMultiplier', 'speedValue', (value) => {
+            this.upgradeSystem.effectMultipliers.speed = parseFloat(value);
+            this.applyDebugChanges();
+        });
+        
+        this.setupDebugSlider('chargeMultiplier', 'chargeValue', (value) => {
+            this.upgradeSystem.effectMultipliers.charge = parseFloat(value);
+            this.applyDebugChanges();
+        });
+        
+        this.setupDebugSlider('efficiencyMultiplier', 'efficiencyValue', (value) => {
+            this.upgradeSystem.effectMultipliers.efficiency = parseFloat(value);
+            this.applyDebugChanges();
+        });
+        
+        this.setupDebugSlider('capacityBonus', 'capacityBonusValue', (value) => {
+            this.upgradeSystem.effectMultipliers.capacityBonus = parseInt(value);
+            this.applyDebugChanges();
+        });
+        
+        this.setupDebugSlider('ropeSpeedMultiplier', 'ropeSpeedValue', (value) => {
+            this.upgradeSystem.effectMultipliers.ropeSpeed = parseFloat(value);
+            this.applyDebugChanges();
+        });
+        
+        // ステージ進行設定
+        this.setupDebugSlider('worldExpansion', 'worldExpansionValue', (value) => {
+            this.upgradeSystem.stageSettings.worldExpansionRate = parseFloat(value);
+        });
+        
+        this.setupDebugSlider('citizenBase', 'citizenBaseValue', (value) => {
+            this.upgradeSystem.stageSettings.citizenBase = parseInt(value);
+        });
+        
+        this.setupDebugSlider('citizenIncrease', 'citizenIncreaseValue', (value) => {
+            this.upgradeSystem.stageSettings.citizenIncrease = parseInt(value);
+        });
+        
+        this.setupDebugSlider('chargeDecrease', 'chargeDecreaseValue', (value) => {
+            this.upgradeSystem.stageSettings.chargeDecreaseRate = parseFloat(value);
+        });
+        
+        this.setupDebugSlider('batteryDrainIncrease', 'batteryDrainValue', (value) => {
+            this.upgradeSystem.stageSettings.batteryDrainIncrease = parseFloat(value);
+        });
+        
+        // ゲーム状態
+        this.setupDebugSlider('batteryInput', 'batteryValue', (value) => {
+            if (this.drone) {
+                this.drone.battery = parseFloat(value);
+                this.updateBatteryUI();
+            }
+        });
+        
+        document.getElementById('setMoney').addEventListener('click', () => {
+            const value = document.getElementById('moneyInput').value;
+            this.upgradeSystem.money = parseInt(value);
+            this.updateDebugDisplay();
+        });
+        
+        document.getElementById('setStage').addEventListener('click', () => {
+            const value = document.getElementById('stageInput').value;
+            const newStage = parseInt(value);
+            if (newStage !== this.currentStage && newStage > 0) {
+                this.currentStage = newStage;
+                this.updateDebugDisplay();
+                
+                // ステージ表示を更新
+                if (this.stageText) {
+                    this.stageText.textContent = this.currentStage;
+                }
+                
+                // ゲームを再初期化
+                if (this.state === 'playing') {
+                    this.initializeGame();
+                }
+            }
+        });
+    }
+    
+    setupDebugSlider(sliderId, displayId, callback) {
+        const slider = document.getElementById(sliderId);
+        const display = document.getElementById(displayId);
+        
+        slider.addEventListener('input', (e) => {
+            display.textContent = e.target.value;
+            callback(e.target.value);
+        });
+    }
+    
+    updateDebugDisplay() {
+        // 現在の値を表示に反映
+        document.getElementById('moneyValue').textContent = this.upgradeSystem.money;
+        document.getElementById('moneyInput').value = this.upgradeSystem.money;
+        
+        if (this.drone) {
+            document.getElementById('batteryValue').textContent = Math.floor(this.drone.battery);
+            document.getElementById('batteryInput').value = Math.floor(this.drone.battery);
+        }
+        
+        document.getElementById('currentStageValue').textContent = this.currentStage;
+        document.getElementById('stageInput').value = this.currentStage;
+        
+        // 各種倍率の現在値を表示
+        document.getElementById('batteryCapacityValue').textContent = this.upgradeSystem.effectMultipliers.batteryCapacity;
+        document.getElementById('batteryCapacityMultiplier').value = this.upgradeSystem.effectMultipliers.batteryCapacity;
+        
+        document.getElementById('speedValue').textContent = this.upgradeSystem.effectMultipliers.speed;
+        document.getElementById('speedMultiplier').value = this.upgradeSystem.effectMultipliers.speed;
+        
+        document.getElementById('chargeValue').textContent = this.upgradeSystem.effectMultipliers.charge;
+        document.getElementById('chargeMultiplier').value = this.upgradeSystem.effectMultipliers.charge;
+        
+        document.getElementById('efficiencyValue').textContent = this.upgradeSystem.effectMultipliers.efficiency;
+        document.getElementById('efficiencyMultiplier').value = this.upgradeSystem.effectMultipliers.efficiency;
+        
+        document.getElementById('capacityBonusValue').textContent = this.upgradeSystem.effectMultipliers.capacityBonus;
+        document.getElementById('capacityBonus').value = this.upgradeSystem.effectMultipliers.capacityBonus;
+        
+        document.getElementById('ropeSpeedValue').textContent = this.upgradeSystem.effectMultipliers.ropeSpeed;
+        document.getElementById('ropeSpeedMultiplier').value = this.upgradeSystem.effectMultipliers.ropeSpeed;
+        
+        // ステージ設定
+        document.getElementById('worldExpansionValue').textContent = this.upgradeSystem.stageSettings.worldExpansionRate;
+        document.getElementById('worldExpansion').value = this.upgradeSystem.stageSettings.worldExpansionRate;
+        
+        document.getElementById('citizenBaseValue').textContent = this.upgradeSystem.stageSettings.citizenBase;
+        document.getElementById('citizenBase').value = this.upgradeSystem.stageSettings.citizenBase;
+        
+        document.getElementById('citizenIncreaseValue').textContent = this.upgradeSystem.stageSettings.citizenIncrease;
+        document.getElementById('citizenIncrease').value = this.upgradeSystem.stageSettings.citizenIncrease;
+        
+        document.getElementById('chargeDecreaseValue').textContent = this.upgradeSystem.stageSettings.chargeDecreaseRate;
+        document.getElementById('chargeDecrease').value = this.upgradeSystem.stageSettings.chargeDecreaseRate;
+        
+        document.getElementById('batteryDrainValue').textContent = this.upgradeSystem.stageSettings.batteryDrainIncrease;
+        document.getElementById('batteryDrainIncrease').value = this.upgradeSystem.stageSettings.batteryDrainIncrease;
+    }
+    
+    applyDebugChanges() {
+        if (this.drone && this.state === 'playing') {
+            // 現在のドローンに変更を適用
+            const savedBattery = this.drone.battery;
+            const savedX = this.drone.x;
+            const savedY = this.drone.y;
+            const savedPassengers = this.drone.passengers;
+            
+            // アップグレードを再適用
+            this.upgradeSystem.applyUpgrades(this.drone, this);
+            
+            // 状態を復元
+            this.drone.battery = savedBattery;
+            this.drone.x = savedX;
+            this.drone.y = savedY;
+            this.drone.passengers = savedPassengers;
+            
+            // バッテリー消費率を再計算
+            this.drone.batteryDrainBase = 0.4 * Math.pow(this.upgradeSystem.effectMultipliers.efficiency, this.upgradeSystem.levels.batteryEfficiency);
+            this.drone.batteryDrainBase += (this.currentStage - 1) * this.upgradeSystem.stageSettings.batteryDrainIncrease;
+            
+            // 速度関連の即座更新
+            this.drone.maxSpeed = 700 * Math.pow(this.upgradeSystem.effectMultipliers.speed, this.upgradeSystem.levels.maxSpeed);
+            this.drone.acceleration = 1000 * Math.pow(this.upgradeSystem.effectMultipliers.acceleration, this.upgradeSystem.levels.acceleration);
+            
+            // 収容人数の更新
+            this.drone.maxCapacity = 5 + this.upgradeSystem.levels.maxCapacity + this.upgradeSystem.effectMultipliers.capacityBonus;
+            
+            // ハシゴ関連の更新
+            this.drone.maxRopeLength = 20 * Math.pow(this.upgradeSystem.effectMultipliers.ropeLength, this.upgradeSystem.levels.ropeLength);
+        }
+    }
+    
+    updateBatteryUI() {
+        if (this.batteryFill && this.batteryPercent && this.drone) {
+            const batteryPercent = Math.max(0, Math.min(100, this.drone.battery));
+            this.batteryFill.style.width = batteryPercent + '%';
+            this.batteryPercent.textContent = Math.floor(batteryPercent) + '%';
+            
+            // バッテリーバーの色を更新
+            if (batteryPercent <= 20) {
+                this.batteryFill.style.background = 'linear-gradient(90deg, #FF5252, #FF1744)';
+            } else if (batteryPercent <= 50) {
+                this.batteryFill.style.background = 'linear-gradient(90deg, #FFA726, #FF6F00)';
+            } else {
+                this.batteryFill.style.background = 'linear-gradient(90deg, #66BB6A, #4CAF50)';
+            }
+        }
     }
 }

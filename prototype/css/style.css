@@ -545,6 +545,169 @@ h3 {
     transition: none;
 }
 
+/* デバッグウインドウ */
+.debug-window {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    max-width: 90vw;
+    max-height: 80vh;
+    background: rgba(0, 0, 0, 0.95);
+    border: 2px solid #00ff00;
+    border-radius: 8px;
+    z-index: 10000;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Courier New', monospace;
+    pointer-events: auto;
+}
+
+.debug-window.hidden {
+    display: none;
+}
+
+.debug-header {
+    background: #00ff00;
+    color: #000;
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.debug-header h3 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.debug-close {
+    background: transparent;
+    border: none;
+    color: #000;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.debug-close:hover {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.debug-content {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.debug-section {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #00ff00;
+}
+
+.debug-section:last-child {
+    border-bottom: none;
+}
+
+.debug-section h4 {
+    color: #00ff00;
+    margin: 0 0 15px 0;
+    font-size: 14px;
+}
+
+.debug-control {
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.debug-control label {
+    color: #00ff00;
+    font-size: 12px;
+    min-width: 200px;
+}
+
+.debug-control input[type="range"] {
+    flex: 1;
+    height: 20px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+}
+
+.debug-control input[type="range"]::-webkit-slider-track {
+    background: #333;
+    height: 4px;
+    border-radius: 2px;
+}
+
+.debug-control input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #00ff00;
+    border-radius: 50%;
+    cursor: pointer;
+    margin-top: -6px;
+}
+
+.debug-control input[type="range"]::-moz-range-track {
+    background: #333;
+    height: 4px;
+    border-radius: 2px;
+}
+
+.debug-control input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: #00ff00;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+}
+
+.debug-control input[type="number"] {
+    background: #333;
+    border: 1px solid #00ff00;
+    color: #00ff00;
+    padding: 4px 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    width: 80px;
+    outline: none;
+}
+
+.debug-control input[type="number"]:focus {
+    border-color: #00ff00;
+    box-shadow: 0 0 5px #00ff00;
+}
+
+.debug-btn {
+    background: #00ff00;
+    color: #000;
+    border: none;
+    padding: 4px 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.debug-btn:hover {
+    background: #00dd00;
+}
+
 /* タッチデバイス判定 */
 @media (pointer: coarse) {
     #gameContainer {
