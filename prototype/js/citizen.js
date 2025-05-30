@@ -26,6 +26,10 @@ class Citizen {
         // プレゼント所持（8%の確率）
         this.hasPresent = Math.random() < 0.08;
         this.presentType = this.hasPresent ? (Math.random() < 0.6 ? 'yellow' : 'blue') : null; // 60%黄色、40%青
+        
+        // ランダムな服の色
+        const clothesColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#FF9FF3', '#54A0FF', '#5F27CD', '#00D2D3', '#FF9F43'];
+        this.clothesColor = clothesColors[Math.floor(Math.random() * clothesColors.length)];
     }
     
     update(deltaTime) {
@@ -71,7 +75,7 @@ class Citizen {
         }
         
         // 体
-        ctx.fillStyle = this.rescued ? '#4CAF50' : '#FF6B6B';
+        ctx.fillStyle = this.rescued ? '#4CAF50' : this.clothesColor;
         ctx.fillRect(-this.width/2, -this.height, this.width, this.height);
         
         // 頭
@@ -195,11 +199,13 @@ class Citizen {
     }
     
     renderPresent(ctx) {
-        const presentY = this.type === 'roof' ? -this.height - 25 : -this.height - 20;
+        // 左肩の位置に配置
+        const presentX = -this.width/2 - 8; // 人物の左側（左肩）
+        const presentY = this.type === 'roof' ? -this.height + 10 : -this.height + 15; // 肩の高さ
         const bobbing = Math.sin(this.animationTimer * 2) * 2;
         
         ctx.save();
-        ctx.translate(0, presentY + bobbing);
+        ctx.translate(presentX, presentY + bobbing);
         
         // プレゼントボックス
         const size = 16;

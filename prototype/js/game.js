@@ -4,7 +4,7 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         
         // バージョン情報
-        this.version = '0.0.13';
+        this.version = '0.0.14';
         
         // アップグレードシステム
         this.upgradeSystem = new UpgradeSystem();

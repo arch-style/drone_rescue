@@ -170,9 +170,11 @@ class Drone {
         
         let verticalConsumption = 1.0;
         if (this.vy < 0) {
+            // 上昇時は大きく消費（現在の4倍）
             verticalConsumption = 1.0 + Math.abs(this.vy) / this.maxSpeed * 4.0;
         } else if (this.vy > 0) {
-            verticalConsumption = 1.0 - Math.min(this.vy / this.maxSpeed * 0.5, 0.5);
+            // 下降時は消費を大幅に減らす（ホバリングの30%）
+            verticalConsumption = 0.3;
         }
         
         const passengerPenalty = 1 + (this.passengers.length * 0.6);
