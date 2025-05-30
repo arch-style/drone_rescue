@@ -162,11 +162,15 @@ class SoundManager {
     playBGM() {
         if (!this.enabled || !this.audioContext) return;
         
-        // 既にBGMが再生中の場合は停止
-        this.stopBGM();
+        // 既にBGMが再生中の場合は何もしない
+        if (this.bgmInstance) {
+            console.log('BGM is already playing');
+            return;
+        }
         
         // BGMインスタンスフラグを設定
         this.bgmInstance = true;
+        console.log('Starting BGM');
         
         // シンプルなBGMパターンを生成
         const playNote = (frequency, time, duration) => {
@@ -222,6 +226,9 @@ class SoundManager {
         if (this.bgmTimeout) {
             clearTimeout(this.bgmTimeout);
             this.bgmTimeout = null;
+        }
+        if (this.bgmInstance) {
+            console.log('Stopping BGM');
         }
         this.bgmInstance = false;
     }

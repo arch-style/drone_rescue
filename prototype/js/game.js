@@ -4,7 +4,7 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         
         // バージョン情報
-        this.version = '0.0.12';
+        this.version = '0.0.13';
         
         // アップグレードシステム
         this.upgradeSystem = new UpgradeSystem();
@@ -53,7 +53,8 @@ class Game {
         this.stagePresents = {
             yellow: 0,
             blue: 0,
-            totalMoney: 0
+            totalMoney: 0,
+            blueUpgrades: [] // 青プレゼントで取得したアップグレード名
         };
         this.continueCount = 0; // コンティニュー回数
         this.totalRescued = 0; // 総救助人数
@@ -324,7 +325,8 @@ class Game {
         this.stagePresents = {
             yellow: 0,
             blue: 0,
-            totalMoney: 0
+            totalMoney: 0,
+            blueUpgrades: []
         };
         
         // UI更新
@@ -333,8 +335,7 @@ class Game {
         this.failedScreen.classList.add('hidden');
         
         
-        // BGM開始（既に再生中の場合は停止してから再開始）
-        this.soundManager.stopBGM();
+        // BGM開始（多重再生防止）
         this.soundManager.playBGM();
         
         // ゲームオブジェクト初期化
@@ -568,6 +569,9 @@ class Game {
                         
                         this.drone.battery = Math.min(100, this.drone.battery + recoveryAmount);
                         
+                        // バッテリー回復時に緊迫感をリセット
+                        this.lastUrgencyLevel = null;
+                        
                         if (isJackpot) {
                             presentMessages.push(`🎉 大当たり！バッテリー${recoveryAmount}%回復！🎉`);
                             this.soundManager.play('stageClear');
@@ -689,6 +693,9 @@ class Game {
         
         // アップグレード名を取得
         const upgradeName = this.upgradeSystem.descriptions[selectedUpgrade] || selectedUpgrade;
+        
+        // 取得したアップグレードを記録
+        this.stagePresents.blueUpgrades.push(upgradeName);
         
         // 詳細メッセージを追加
         setTimeout(() => {
@@ -838,6 +845,9 @@ class Game {
                         this.drone.battery = Math.min(100, this.drone.battery + port.chargeAmount);
                         port.used = true; // 使用済みにする
                         this.soundManager.play('charge');
+                        
+                        // バッテリー回復時に緊迫感をリセット
+                        this.lastUrgencyLevel = null;
                     }
                 }
             }
@@ -881,28 +891,28 @@ class Game {
                 keyShift = 0;
                 break;
             case 1:
-                speedMultiplier = 1.1;
+                speedMultiplier = 1.2;
                 keyShift = 0;
                 break;
             case 2:
-                speedMultiplier = 1.25;
-                keyShift = 1;
-                break;
-            case 3:
-                speedMultiplier = 1.4;
-                keyShift = 1;
-                break;
-            case 4:
-                speedMultiplier = 1.6;
+                speedMultiplier = 1.5;
                 keyShift = 2;
                 break;
-            case 5:
+            case 3:
                 speedMultiplier = 1.8;
                 keyShift = 2;
                 break;
+            case 4:
+                speedMultiplier = 2.2;
+                keyShift = 4;
+                break;
+            case 5:
+                speedMultiplier = 2.6;
+                keyShift = 4;
+                break;
             case 6:
-                speedMultiplier = 2.0;
-                keyShift = 3;
+                speedMultiplier = 3.0;
+                keyShift = 6;
                 break;
         }
         
@@ -911,11 +921,6 @@ class Game {
             this.lastUrgencyLevel = urgencyLevel;
             this.soundManager.setBGMSpeed(speedMultiplier);
             this.soundManager.setBGMKey(keyShift);
-            // BGMの再生状態を確認してから再開
-            if (this.soundManager.bgmInstance) {
-                this.soundManager.stopBGM();
-                this.soundManager.playBGM();
-            }
         }
         
         // 制限時間チェック
@@ -1311,6 +1316,12 @@ class Game {
                 }
                 if (this.stagePresents.blue > 0) {
                     presentInfo += `<span style="color: #4169E1">🔷 青色プレゼント: ${this.stagePresents.blue}個</span><br>`;
+                    if (this.stagePresents.blueUpgrades.length > 0) {
+                        presentInfo += `<span style="color: #4169E1; font-size: 14px">🔧 取得アップグレード:</span><br>`;
+                        this.stagePresents.blueUpgrades.forEach(upgrade => {
+                            presentInfo += `<span style="color: #4169E1; font-size: 14px">• ${upgrade}</span><br>`;
+                        });
+                    }
                 }
             }
             
