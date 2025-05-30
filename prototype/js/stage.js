@@ -19,31 +19,40 @@ class Stage {
         // 雲のデータを動的に生成
         this.clouds = this.generateClouds();
         
-        // 充電ポート（ランダムな位置に配置）
-        const portSide = Math.random() < 0.5 ? 'left' : 'right';
-        const baseRange = width * 0.2; // 基本範囲20%
-        const stageMultiplier = 1 + (this.stageNumber - 1) * 0.3; // ステージごとに振り幅拡大
-        const portRange = baseRange * stageMultiplier;
+        // 充電ポート（ステージ範囲内でランダムな位置に配置）
+        const stageMargin = 80; // ステージ端からの最小距離
+        const homeBuffer = 200; // 基地からの最小距離
         
-        if (portSide === 'left') {
-            this.chargingPort = {
-                x: Math.random() * (this.baseX - portRange - 100) + 100,
-                y: this.groundLevel,
-                width: 60,
-                height: 40,
-                used: false,
-                chargeAmount: 25
-            };
-        } else {
-            this.chargingPort = {
-                x: Math.random() * (width - this.baseX - this.baseWidth - portRange - 100) + this.baseX + this.baseWidth + portRange,
-                y: this.groundLevel,
-                width: 60,
-                height: 40,
-                used: false,
-                chargeAmount: 25
-            };
+        let portX;
+        let attempts = 0;
+        const maxAttempts = 50;
+        
+        // 基地から離れた位置にランダムに配置
+        while (attempts < maxAttempts) {
+            portX = Math.random() * (width - stageMargin * 2) + stageMargin;
+            
+            // 基地との距離をチェック
+            if (Math.abs(portX - (this.baseX + this.baseWidth / 2)) >= homeBuffer) {
+                break;
+            }
+            attempts++;
         }
+        
+        // 配置に失敗した場合は、基地から最も遠い端に配置
+        if (attempts >= maxAttempts) {
+            const leftDistance = this.baseX;
+            const rightDistance = width - (this.baseX + this.baseWidth);
+            portX = leftDistance > rightDistance ? stageMargin : width - stageMargin;
+        }
+        
+        this.chargingPort = {
+            x: portX,
+            y: this.groundLevel,
+            width: 60,
+            height: 40,
+            used: false,
+            chargeAmount: 25
+        };
         
         // 背景のグラデーション用
         this.skyGradient = null;
@@ -286,12 +295,12 @@ class Stage {
         ctx.fillStyle = '#333';
         ctx.fillRect(port.x - port.width/2 + 5, port.y - 5, port.width - 10, 5);
         
-        // 充電量表示（未使用時のみ）
+        // 充電量表示（未使用時のみ、小数点切り捨て、大きいフォント）
         if (!port.used) {
             ctx.fillStyle = '#FFF';
-            ctx.font = 'bold 12px Arial';
+            ctx.font = 'bold 18px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText(`+${port.chargeAmount}%`, port.x, port.y - port.height - 5);
+            ctx.fillText(`+${Math.floor(port.chargeAmount)}%`, port.x, port.y - port.height - 8);
         }
     }
 }

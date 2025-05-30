@@ -4,7 +4,7 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         
         // バージョン情報
-        this.version = '0.0.11';
+        this.version = '0.0.12';
         
         // アップグレードシステム
         this.upgradeSystem = new UpgradeSystem();
@@ -48,6 +48,13 @@ class Game {
         this.lastTime = 0;
         this.failureReason = '';
         this.currentStage = 1; // 現在のステージ番号
+        
+        // プレゼント取得追跡
+        this.stagePresents = {
+            yellow: 0,
+            blue: 0,
+            totalMoney: 0
+        };
         this.continueCount = 0; // コンティニュー回数
         this.totalRescued = 0; // 総救助人数
         this.debugWindowOpen = false; // デバッグウィンドウの状態
@@ -313,6 +320,13 @@ class Game {
         this.time = 0;
         this.continueCount = 0; // ステージ開始時にリセット
         
+        // プレゼント取得をリセット
+        this.stagePresents = {
+            yellow: 0,
+            blue: 0,
+            totalMoney: 0
+        };
+        
         // UI更新
         this.startScreen.classList.add('hidden');
         this.gameOverScreen.classList.add('hidden');
@@ -371,50 +385,32 @@ class Game {
         // ホームポイントの位置
         const homeX = this.stage.baseX + this.stage.baseWidth / 2;
         
-        // 地上の市民を配置（重ならないように）
+        // 地上の市民を配置（重ならないように、ステージ全体に広く分散）
         for (let i = 0; i < groundCount; i++) {
             let placed = false;
             let attempts = 0;
             const maxAttempts = 100;
             
             while (!placed && attempts < maxAttempts) {
-                // ホームポイントの左右にランダムに配置（画面内に収まるように）
-                let x;
-                const screenMargin = 100; // 画面端からの最小距離
-                const leftMin = Math.max(screenMargin, this.camera.x + screenMargin);
-                const rightMax = Math.min(this.worldWidth - screenMargin, this.camera.x + this.width - screenMargin);
+                // ステージ全体にランダムに配置（境界からは余裕を持つ）
+                const stageMargin = 50; // ステージ端からの最小距離
+                const x = Math.random() * (this.worldWidth - stageMargin * 2) + stageMargin;
                 
-                // ホームポイントから離れた場所に配置（最低200ピクセル離す）
-                const homeBuffer = 200;
+                // ホームポイントとの距離をチェック（最低150ピクセル離す）
+                const homeBuffer = 150;
+                const homeDistance = Math.abs(x - homeX);
                 
-                if (Math.random() < 0.5) {
-                    // 50%の確率でホームポイントの左側（十分離れた位置）
-                    const leftMax = Math.min(homeX - homeBuffer, rightMax);
-                    if (leftMax > leftMin) {
-                        x = Math.random() * (leftMax - leftMin) + leftMin;
-                    } else {
-                        // 左側に十分なスペースがない場合は右側へ
-                        const rightMin = Math.max(homeX + homeBuffer, leftMin);
-                        x = Math.random() * (rightMax - rightMin) + rightMin;
-                    }
-                } else {
-                    // 50%の確率でホームポイントの右側（十分離れた位置）
-                    const rightMin = Math.max(homeX + homeBuffer, leftMin);
-                    if (rightMin < rightMax) {
-                        x = Math.random() * (rightMax - rightMin) + rightMin;
-                    } else {
-                        // 右側に十分なスペースがない場合は左側へ
-                        const leftMax = Math.min(homeX - homeBuffer, rightMax);
-                        x = Math.random() * (leftMax - leftMin) + leftMin;
-                    }
+                if (homeDistance < homeBuffer) {
+                    attempts++;
+                    continue;
                 }
                 
-                // 他の市民との重なりをチェック（キャラクター半分以上離れているか）
+                // 他の市民との重なりをチェック（最低50ピクセル離れているか）
                 let canPlace = true;
-                const minDistance = 10; // キャラクターの半分の幅
+                const minDistance = 50; // 市民同士の最小距離を増加
                 
                 for (const other of this.citizens) {
-                    if (Math.abs(other.x - x) < minDistance * 2) {
+                    if (Math.abs(other.x - x) < minDistance) {
                         canPlace = false;
                         break;
                     }
@@ -545,6 +541,7 @@ class Game {
             // プレゼント効果の処理
             if (citizen.hasPresent) {
                 if (citizen.presentType === 'yellow') {
+                    this.stagePresents.yellow++;
                     // 黄色プレゼント: バッテリー回復またはお金（ステージに応じて効果上昇）
                     const stageMultiplier = 0.5 + (this.currentStage - 1) * 0.5; // ステージ1: 0.5倍, ステージ2: 1倍, ステージ3: 1.5倍...
                     
@@ -600,6 +597,7 @@ class Game {
                         }
                         
                         this.upgradeSystem.money += moneyAmount;
+                        this.stagePresents.totalMoney += moneyAmount;
                         
                         if (isJackpot) {
                             presentMessages.push(`💰 大当たり！$${moneyAmount}獲得！💰`);
@@ -610,9 +608,9 @@ class Game {
                         }
                     }
                 } else if (citizen.presentType === 'blue') {
-                    // 青プレゼント: ランダムパワーアップ
+                    this.stagePresents.blue++;
+                    // 青プレゼント: ランダムパワーアップ（表示なし）
                     this.applyRandomPowerUp();
-                    presentMessages.push(`🎁 特殊パワーアップ発動！`);
                     this.soundManager.play('powerUp');
                 }
             }
@@ -1301,10 +1299,26 @@ class Game {
             else if (reward >= 60) rank = 'A';
             else if (reward >= 40) rank = 'B';
             
+            // プレゼント取得情報を生成
+            let presentInfo = '';
+            if (this.stagePresents.yellow > 0 || this.stagePresents.blue > 0) {
+                presentInfo = `<br><span style="font-size: 20px; color: #FF6B6B">🎁 プレゼント取得</span><br>`;
+                if (this.stagePresents.yellow > 0) {
+                    presentInfo += `<span style="color: #FFD700">📦 黄色プレゼント: ${this.stagePresents.yellow}個</span><br>`;
+                    if (this.stagePresents.totalMoney > 0) {
+                        presentInfo += `<span style="color: #4CAF50">💰 獲得金額: $${this.stagePresents.totalMoney}</span><br>`;
+                    }
+                }
+                if (this.stagePresents.blue > 0) {
+                    presentInfo += `<span style="color: #4169E1">🔷 青色プレゼント: ${this.stagePresents.blue}個</span><br>`;
+                }
+            }
+            
             const finalScoreText = `<span style="font-size: 28px; color: #FFD700">ステージ ${this.currentStage} クリア！</span><br><br>` +
                                  `救助人数: ${this.rescuedCount}/${this.citizens.length}<br>` +
                                  `クリア時間: ${Math.floor(this.time / 60)}:${Math.floor(this.time % 60).toString().padStart(2, '0')}<br>` +
                                  `バッテリー残量: ${Math.floor(this.drone.battery)}%<br>` +
+                                 presentInfo +
                                  `<br>` +
                                  `<span style="font-size: 32px; color: #FFD700">評価: ${rank}</span><br>` +
                                  `<span style="font-size: 24px; color: #4CAF50">報酬: $${reward}</span>`;
