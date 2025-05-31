@@ -4,7 +4,7 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         
         // バージョン情報
-        this.version = '0.0.17';
+        this.version = '0.0.18';
         
         // アップグレードシステム
         this.upgradeSystem = new UpgradeSystem();
@@ -476,7 +476,7 @@ class Game {
     handleRescueAction() {
         if (!this.drone || this.drone.isCrashing) return;
         
-        // ロープ救助の開始/停止
+        // ロープ救助の開始（既に出ている場合は何もしない）
         if (!this.drone.isRescuing) {
             // ハシゴを出す時のバッテリー消費（アップグレード効果を適用）
             const ropeConsumption = 3 * Math.pow(this.upgradeSystem.effectMultipliers.ropeBatteryEfficiency, this.upgradeSystem.levels.ropeBatteryEfficiency);
@@ -489,9 +489,6 @@ class Game {
             const ladderDurationBonus = this.upgradeSystem.levels.ladderDuration * 0.2;
             this.drone.ladderTimer = this.drone.ladderDuration + ladderDurationBonus;
             this.soundManager.play('rope');
-        } else {
-            this.drone.isRescuing = false;
-            this.drone.ropeLength = 0;
         }
     }
     
