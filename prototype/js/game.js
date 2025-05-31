@@ -4,7 +4,7 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         
         // バージョン情報
-        this.version = '0.0.20';
+        this.version = '0.0.21';
         
         // アップグレードシステム
         this.upgradeSystem = new UpgradeSystem();
@@ -135,6 +135,16 @@ class Game {
                 const modal = document.getElementById('upgradeModal');
                 modal.classList.add('hidden');
                 this.nextStage();
+            });
+        }
+        
+        // ステージクリア後の「次へ進む」ボタン
+        const continueToUpgradeBtn = document.getElementById('continueToUpgradeButton');
+        if (continueToUpgradeBtn) {
+            continueToUpgradeBtn.addEventListener('click', () => {
+                this.soundManager.play('click');
+                this.gameOverScreen.classList.add('hidden');
+                this.showUpgradeSelection();
             });
         }
     }
@@ -1379,12 +1389,6 @@ class Game {
         
         // ゲームオーバー画面表示
         this.gameOverScreen.classList.remove('hidden');
-        
-        // 3秒後にゲームオーバー画面を非表示にしてからアップグレード選択を表示
-        setTimeout(() => {
-            this.gameOverScreen.classList.add('hidden');
-            this.showUpgradeSelection();
-        }, 3000);
     }
     
     showUpgradeSelection() {
