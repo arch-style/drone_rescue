@@ -4,7 +4,7 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         
         // バージョン情報
-        this.version = '0.0.21';
+        this.version = '0.0.22';
         
         // アップグレードシステム
         this.upgradeSystem = new UpgradeSystem();
@@ -134,6 +134,7 @@ class Game {
                 this.soundManager.play('click');
                 const modal = document.getElementById('upgradeModal');
                 modal.classList.add('hidden');
+                this.upgradeSelectionCount = undefined; // リセット
                 this.nextStage();
             });
         }
@@ -1392,6 +1393,11 @@ class Game {
     }
     
     showUpgradeSelection() {
+        // 初回呼び出し時に選択回数を初期化
+        if (this.upgradeSelectionCount === undefined) {
+            this.upgradeSelectionCount = 3;
+        }
+        
         // アップグレード選択肢を生成
         const choices = this.upgradeSystem.generateUpgradeChoices();
         const modal = document.getElementById('upgradeModal');
@@ -1401,8 +1407,8 @@ class Game {
         
         if (!modal) return;
         
-        // 現在の資金のみ表示
-        currentMoney.textContent = this.upgradeSystem.money;
+        // 現在の資金と残り選択回数を表示
+        currentMoney.innerHTML = `$${this.upgradeSystem.money} <span style="margin-left: 20px; color: #FFD700;">残り選択: ${this.upgradeSelectionCount}回</span>`;
         
         // 選択肢をクリア
         choicesContainer.innerHTML = '';
@@ -1466,13 +1472,49 @@ class Game {
                 
                 this.soundManager.play('powerup');
                 this.purchaseUpgrade(upgrade);
+                this.upgradeSelectionCount--;
                 
-                // アップグレード画面を更新（複数購入可能）
-                this.showUpgradeSelection();
+                // 選択回数が残っている場合のみ画面を更新
+                if (this.upgradeSelectionCount > 0) {
+                    this.showUpgradeSelection();
+                } else {
+                    // 選択回数を使い切ったら次のステージへ
+                    modal.classList.add('hidden');
+                    this.upgradeSelectionCount = undefined; // リセット
+                    this.nextStage();
+                }
             });
             
             choicesContainer.appendChild(card);
         });
+        
+        // シャッフルボタンの設定
+        const shuffleBtn = document.getElementById('shuffleBtn');
+        if (shuffleBtn) {
+            // 選択回数が残っている場合のみ有効
+            shuffleBtn.disabled = this.upgradeSelectionCount <= 0;
+            
+            // 既存のイベントリスナーを削除（重複防止）
+            const newShuffleBtn = shuffleBtn.cloneNode(true);
+            shuffleBtn.parentNode.replaceChild(newShuffleBtn, shuffleBtn);
+            
+            newShuffleBtn.addEventListener('click', () => {
+                if (this.upgradeSelectionCount > 0) {
+                    this.soundManager.play('click');
+                    this.upgradeSelectionCount--;
+                    
+                    // 選択回数を使い切ったら次のステージへ
+                    if (this.upgradeSelectionCount <= 0) {
+                        modal.classList.add('hidden');
+                        this.upgradeSelectionCount = undefined; // リセット
+                        this.nextStage();
+                    } else {
+                        // 新しい選択肢を生成
+                        this.showUpgradeSelection();
+                    }
+                }
+            });
+        }
         
         // スキップ選択肢は上部のボタンで代替するため削除
         
