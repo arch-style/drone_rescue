@@ -74,7 +74,7 @@ class UpgradeSystem {
         this.stageSettings = {
             worldExpansionRate: 1.15,  // ワールド拡大率
             citizenBase: 5,            // 市民増加基準
-            citizenIncrease: 2,        // 市民増加率
+            citizenIncrease: 1.5,      // 市民増加率（1ステージごとに1.5人増加）
             chargeDecreaseRate: 0.9,   // 充電ポート減少率
             batteryDrainIncrease: 0.03 // バッテリー消費増加
         };
@@ -195,8 +195,8 @@ class UpgradeSystem {
     
     // 評価に基づいた報酬金額を計算
     calculateReward(batteryPercent, timePercent) {
-        // バッテリー残量と残り時間の平均を取る
-        const score = (batteryPercent + timePercent) / 2;
+        // バッテリー残量と残り時間の平均を取る（1.5倍の重み付け）
+        const score = (batteryPercent * 1.5 + timePercent * 1.5) / 2;
         
         // 0〜61ドルの範囲で報酬を計算（47 * 1.3 = 61.1）
         const reward = Math.floor(score * 61);

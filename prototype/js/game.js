@@ -4,7 +4,7 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         
         // バージョン情報
-        this.version = '0.0.15';
+        this.version = '0.0.16';
         
         // アップグレードシステム
         this.upgradeSystem = new UpgradeSystem();
@@ -335,7 +335,9 @@ class Game {
         this.failedScreen.classList.add('hidden');
         
         
-        // BGM開始（多重再生防止）
+        // BGMをリセットして開始（多重再生防止）
+        this.soundManager.resetBGM();
+        this.lastUrgencyLevel = null; // 緊迫度を初期化
         this.soundManager.playBGM();
         
         // ゲームオブジェクト初期化
@@ -375,8 +377,8 @@ class Game {
     
     generateCitizens() {
         // 救助者数
-        const citizenCount = this.upgradeSystem.stageSettings.citizenBase + 
-                           (this.currentStage - 1) * this.upgradeSystem.stageSettings.citizenIncrease;
+        const citizenCount = Math.floor(this.upgradeSystem.stageSettings.citizenBase + 
+                           (this.currentStage - 1) * this.upgradeSystem.stageSettings.citizenIncrease);
         
         // 地上と屋上の比率
         const roofRatio = Math.min(0.3 + (this.currentStage - 1) * 0.1, 0.7);
@@ -1616,6 +1618,7 @@ class Game {
             
             // BGMを再開（速度とキーもリセット）
             this.soundManager.resetBGM();
+            this.lastUrgencyLevel = null; // 緊迫度を初期化
             this.soundManager.playBGM();
         }
     }
