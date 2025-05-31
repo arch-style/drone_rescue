@@ -4,7 +4,7 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         
         // バージョン情報
-        this.version = '0.0.14';
+        this.version = '0.0.15';
         
         // アップグレードシステム
         this.upgradeSystem = new UpgradeSystem();
@@ -483,6 +483,9 @@ class Game {
             this.drone.showRopeConsumption(); // 消費表示
             this.drone.isRescuing = true;
             this.drone.ropeLength = 0;
+            // ハシゴタイマーを設定（アップグレード効果を適用）
+            const ladderDurationBonus = this.upgradeSystem.levels.ladderDuration * 0.2;
+            this.drone.ladderTimer = this.drone.ladderDuration + ladderDurationBonus;
             this.soundManager.play('rope');
         } else {
             this.drone.isRescuing = false;
@@ -791,42 +794,55 @@ class Game {
             
             // ロープ救助の処理（ゲーム終了時は処理しない）
             if (this.drone.isRescuing && this.state === 'playing') {
-                // ロープを伸ばす（アップグレード効果を適用）
-                const ropeSpeed = 100 * Math.pow(this.upgradeSystem.effectMultipliers.ropeSpeed, this.upgradeSystem.levels.ropeSpeed);
-                if (this.drone.ropeLength < this.drone.maxRopeLength) {
-                    this.drone.ropeLength += ropeSpeed * deltaTime;
-                }
+                // ハシゴタイマーを更新
+                this.drone.ladderTimer -= deltaTime;
                 
-                // ロープの先端位置を計算
-                const ropeEndX = this.drone.x;
-                const ropeEndY = this.drone.y + this.drone.height/2 + this.drone.ropeLength;
-                
-                // 救助可能な市民をチェック
-                if (this.drone.passengers.length < this.drone.maxCapacity) {
-                    this.citizens.forEach(citizen => {
-                        if (!citizen.rescued && !citizen.delivered) {
-                            const distance = Math.sqrt(
-                                Math.pow(citizen.x - ropeEndX, 2) + 
-                                Math.pow(citizen.y - ropeEndY, 2)
-                            );
-                            if (distance < 30) {
-                                this.rescueCitizen(citizen);
-                                // 救助後、ハシゴを自動収納
-                                this.drone.isRescuing = false;
-                                this.drone.ropeLength = 0;
-                            }
-                        }
-                    });
-                }
-                
-                // ホームポイント上空で乗客がいる場合、降下処理
-                if (this.isAboveBase() && this.drone.passengers.length > 0) {
-                    // ハシゴが基地に届いたら降下
+                // タイマーが切れたらハシゴを収納
+                if (this.drone.ladderTimer <= 0) {
+                    this.drone.isRescuing = false;
+                    this.drone.ropeLength = 0;
+                } else {
+                    // ロープを伸ばす（アップグレード効果を適用）
+                    const ropeSpeed = 100 * Math.pow(this.upgradeSystem.effectMultipliers.ropeSpeed, this.upgradeSystem.levels.ropeSpeed);
+                    if (this.drone.ropeLength < this.drone.maxRopeLength) {
+                        this.drone.ropeLength += ropeSpeed * deltaTime;
+                    }
+                    
+                    // ロープの先端位置を計算
+                    const ropeEndX = this.drone.x;
                     const ropeEndY = this.drone.y + this.drone.height/2 + this.drone.ropeLength;
-                    if (ropeEndY >= this.stage.groundLevel - 10) {
-                        this.dropOffPassengers();
-                        this.drone.isRescuing = false;
-                        this.drone.ropeLength = 0;
+                    
+                    // 救助可能な市民をチェック（ハシゴが出ている間は何人でも救助可能）
+                    if (this.drone.passengers.length < this.drone.maxCapacity) {
+                        this.citizens.forEach(citizen => {
+                            if (!citizen.rescued && !citizen.delivered) {
+                                // ハシゴ全体に当たり判定を拡張
+                                const ladderTopY = this.drone.y + this.drone.height/2;
+                                const ladderBottomY = ladderTopY + this.drone.ropeLength;
+                                
+                                // 市民がハシゴの横幅範囲内にいるか
+                                const horizontalInRange = Math.abs(citizen.x - this.drone.x) < 20;
+                                
+                                // 市民がハシゴの縦範囲内にいるか
+                                const verticalInRange = citizen.y >= ladderTopY - 15 && citizen.y <= ladderBottomY + 15;
+                                
+                                if (horizontalInRange && verticalInRange) {
+                                    this.rescueCitizen(citizen);
+                                    // ハシゴが出ている間は収納しない
+                                }
+                            }
+                        });
+                    }
+                    
+                    // ホームポイント上空で乗客がいる場合、降下処理
+                    if (this.isAboveBase() && this.drone.passengers.length > 0) {
+                        // ハシゴが基地に届いたら降下
+                        const ropeEndY = this.drone.y + this.drone.height/2 + this.drone.ropeLength;
+                        if (ropeEndY >= this.stage.groundLevel - 10) {
+                            this.dropOffPassengers();
+                            this.drone.isRescuing = false;
+                            this.drone.ropeLength = 0;
+                        }
                     }
                 }
             }
@@ -875,8 +891,8 @@ class Game {
         let urgencyLevel = 0;
         
         // 残り時間による緊迫感
-        if (remainingTime <= 60) urgencyLevel += 1;
         if (remainingTime <= 30) urgencyLevel += 1;
+        if (remainingTime <= 20) urgencyLevel += 1;
         if (remainingTime <= 10) urgencyLevel += 1;
         
         // バッテリー残量による緊迫感

@@ -31,6 +31,8 @@ class Drone {
         this.maxRopeLength = 20; // 初期長さは20px
         this.isCrashing = false;
         this.crashY = 0;
+        this.ladderDuration = 1.0; // ハシゴの出現時間（1秒）
+        this.ladderTimer = 0; // ハシゴのタイマー
         
         // ワールドサイズ（後から設定される）
         this.worldWidth = 1600;
@@ -70,8 +72,10 @@ class Drone {
             // 上昇時は大きく消費（現在の4倍）
             verticalConsumption = 1.0 + Math.abs(this.vy) / this.maxSpeed * 4.0;
         } else if (this.vy > 0) {
-            // 下降時は消費を大幅に減らす（ホバリングの30%）
-            verticalConsumption = 0.3;
+            // 下降時は速度に応じて消費を減らす
+            verticalConsumption = 1.0 - Math.abs(this.vy) / this.maxSpeed * 4.0;
+            // 0より小さくならないようにする
+            verticalConsumption = Math.max(0, verticalConsumption);
         }
         
         // 乗客数による消費（より大きく増加）
@@ -173,8 +177,10 @@ class Drone {
             // 上昇時は大きく消費（現在の4倍）
             verticalConsumption = 1.0 + Math.abs(this.vy) / this.maxSpeed * 4.0;
         } else if (this.vy > 0) {
-            // 下降時は消費を大幅に減らす（ホバリングの30%）
-            verticalConsumption = 0.3;
+            // 下降時は速度に応じて消費を減らす
+            verticalConsumption = 1.0 - Math.abs(this.vy) / this.maxSpeed * 4.0;
+            // 0より小さくならないようにする
+            verticalConsumption = Math.max(0, verticalConsumption);
         }
         
         const passengerPenalty = 1 + (this.passengers.length * 0.6);

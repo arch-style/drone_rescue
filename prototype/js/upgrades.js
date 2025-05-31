@@ -12,7 +12,8 @@ class UpgradeSystem {
             maxCapacity: 0,     // 最大収容人数
             ropeSpeed: 0,       // 梯子を降ろす速度
             ropeLength: 0,      // 梯子の長さ
-            ropeBatteryEfficiency: 0 // 梯子のバッテリー効率
+            ropeBatteryEfficiency: 0, // 梯子のバッテリー効率
+            ladderDuration: 0   // 梯子の出現時間
         };
         
         // 基本価格
@@ -23,7 +24,8 @@ class UpgradeSystem {
             maxCapacity: 25,
             ropeSpeed: 10,
             ropeLength: 15,
-            ropeBatteryEfficiency: 20
+            ropeBatteryEfficiency: 20,
+            ladderDuration: 12
         };
         
         // 効果の説明
@@ -34,7 +36,8 @@ class UpgradeSystem {
             maxCapacity: "収容人数",
             ropeSpeed: "ハシゴ展開速度",
             ropeLength: "ハシゴの長さ",
-            ropeBatteryEfficiency: "ハシゴバッテリー効率"
+            ropeBatteryEfficiency: "ハシゴバッテリー効率",
+            ladderDuration: "ハシゴ出現時間"
         };
         
         // アップグレード属性（game.jsが期待する形式）
@@ -45,7 +48,8 @@ class UpgradeSystem {
             maxCapacity: { name: "収容人数", description: "最大収容人数が1人増加" },
             ropeSpeed: { name: "ハシゴ展開速度", description: "ハシゴを降ろす速度が30%上昇" },
             ropeLength: { name: "ハシゴの長さ", description: "ハシゴの最大長が100%伸びる" },
-            ropeBatteryEfficiency: { name: "ハシゴバッテリー効率", description: "ハシゴ使用時のバッテリー消費が15%減少" }
+            ropeBatteryEfficiency: { name: "ハシゴバッテリー効率", description: "ハシゴ使用時のバッテリー消費が15%減少" },
+            ladderDuration: { name: "ハシゴ出現時間", description: "ハシゴの出現時間が0.2秒増加" }
         };
         
         // 効果の倍率（全て2倍に強化）
@@ -57,6 +61,7 @@ class UpgradeSystem {
             ropeSpeed: 1.3,       // 30%ずつ上昇
             ropeLength: 1.5,      // 50%ずつ上昇
             ropeBatteryEfficiency: 0.85, // 15%ずつ消費減少（半分に調整）
+            ladderDuration: 0.2,  // 0.2秒ずつ増加（特別処理）
             // デバッグ用の追加倍率
             batteryCapacity: 1.2, // バッテリー容量
             speed: 1.15,          // 移動速度
