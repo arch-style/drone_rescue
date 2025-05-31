@@ -4,7 +4,7 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         
         // バージョン情報
-        this.version = '0.0.16';
+        this.version = '0.0.17';
         
         // アップグレードシステム
         this.upgradeSystem = new UpgradeSystem();
@@ -1278,9 +1278,26 @@ class Game {
         if (this.state === 'failed') {
             // ミッション失敗
             document.getElementById('failedReason').textContent = this.failureReason;
+            
+            // 残り時間と残りバッテリーを計算
+            const remainingTime = Math.max(0, Math.floor(this.timeLimit - this.time));
+            const remainingBattery = Math.max(0, Math.floor(this.drone ? this.drone.battery : 0));
+            
+            // スコア計算
+            const continueBonus = Math.min(this.continueCount, 9);
+            const score = this.currentStage * 1000000 + 
+                         this.totalRescued * 10000 + 
+                         this.upgradeSystem.money * 100 + 
+                         remainingTime * 10 + 
+                         remainingBattery * 10 + 
+                         continueBonus;
+            
             const failedScoreText = `<span style="font-size: 24px; color: #ff6b6b">ステージ ${this.currentStage}</span><br><br>` +
+                                  `総救助人数: ${this.totalRescued}人<br>` +
                                   `所持金: $${this.upgradeSystem.money}<br>` +
-                                  `総救助人数: ${this.totalRescued}人`;
+                                  `残り時間: ${remainingTime}秒<br>` +
+                                  `残りバッテリー: ${remainingBattery}%<br><br>` +
+                                  `<span style="font-size: 20px; color: #FFD700">スコア: ${score.toLocaleString()}</span>`;
             document.getElementById('failedScore').innerHTML = failedScoreText;
             
             // コンティニュー金額を計算（50 * 2^回数）
