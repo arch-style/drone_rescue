@@ -4,7 +4,7 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         
         // バージョン情報
-        this.version = '0.0.19';
+        this.version = '0.0.20';
         
         // アップグレードシステム
         this.upgradeSystem = new UpgradeSystem();
@@ -1329,7 +1329,7 @@ class Game {
             const batteryPercent = this.drone.battery / 100;
             const timePercent = (this.timeLimit - this.time) / this.timeLimit;
             const baseReward = this.upgradeSystem.calculateReward(batteryPercent, timePercent);
-            const rescueBonus = this.rescuedCount * 5; // 救助者1人につき$5
+            const rescueBonus = Math.max(0, (this.rescuedCount - 5) * 5); // 5人を超えた分、1人につき$5
             const totalReward = baseReward + rescueBonus;
             
             // 評価ランク（基本報酬で判定）
@@ -1367,7 +1367,7 @@ class Game {
                                  `<br>` +
                                  `<span style="font-size: 32px; color: #FFD700">評価: ${rank}</span><br>` +
                                  `<span style="font-size: 20px; color: #4CAF50">基本報酬: $${baseReward}</span><br>` +
-                                 `<span style="font-size: 20px; color: #4CAF50">救助ボーナス: $${rescueBonus} (${this.rescuedCount}人 × $5)</span><br>` +
+                                 `<span style="font-size: 20px; color: #4CAF50">救助ボーナス: $${rescueBonus} ${rescueBonus > 0 ? `(${this.rescuedCount - 5}人 × $5)` : '(5人以下)'}</span><br>` +
                                  `<span style="font-size: 24px; color: #4CAF50">合計報酬: $${totalReward}</span>`;
             document.getElementById('finalScore').innerHTML = finalScoreText;
             
