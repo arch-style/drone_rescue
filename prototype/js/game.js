@@ -4,7 +4,7 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         
         // バージョン情報
-        this.version = '0.0.24';
+        this.version = '0.0.25';
         
         // アップグレードシステム
         this.upgradeSystem = new UpgradeSystem();
@@ -87,6 +87,9 @@ class Game {
         this.rescuedText = document.getElementById('rescuedText');
         this.timeText = document.getElementById('timeText');
         this.stageText = document.getElementById('stageText');
+        
+        // タイトル画面の初期化
+        this.titleScreen = new TitleScreen();
         
         // ボタンイベント
         document.getElementById('startButton').addEventListener('click', () => {

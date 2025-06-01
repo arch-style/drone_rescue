@@ -48,25 +48,33 @@
                 </div>
             </div>
             <div id="startScreen" class="screen">
-                <h1>Drone Rescue: Sky Guardian</h1>
-                <p>プロトタイプ版</p>
-                <button id="startButton" class="button">ゲーム開始</button>
-                <button id="tutorialButton" class="button">チュートリアル</button>
-                <p class="fullscreen-hint" style="display: none; font-size: 12px; margin-top: 10px; color: #888;">
-                    ※ フルスクリーンでプレイするには、ホーム画面に追加してください
-                </p>
-                <div class="instructions">
-                    <h3>操作方法</h3>
-                    <ul id="pcControls">
-                        <li>↑↓ または W/S: 上昇・下降</li>
-                        <li>←→ または A/D: 左右移動</li>
-                        <li>スペース: ハシゴで救助/投下</li>
-                    </ul>
-                    <ul id="touchControls" style="display: none;">
-                        <li>画面をタッチ: アナログスティック表示</li>
-                        <li>スティック操作: ドローン移動</li>
-                        <li>短くタップ: ハシゴで救助/投下</li>
-                    </ul>
+                <canvas id="titleCanvas" class="title-canvas"></canvas>
+                <div class="title-content">
+                    <div class="title-header">
+                        <h1 class="title-main">Drone Rescue</h1>
+                        <h2 class="title-sub">Sky Guardian</h2>
+                        <p class="title-version">プロトタイプ版 v0.0.25</p>
+                    </div>
+                    <div class="button-container">
+                        <button id="startButton" class="button button-primary">ゲーム開始</button>
+                        <button id="tutorialButton" class="button button-secondary">チュートリアル</button>
+                    </div>
+                    <p class="fullscreen-hint" style="display: none; font-size: 12px; margin-top: 10px; color: #888;">
+                        ※ フルスクリーンでプレイするには、ホーム画面に追加してください
+                    </p>
+                    <div class="instructions">
+                        <h3>操作方法</h3>
+                        <ul id="pcControls">
+                            <li>↑↓ または W/S: 上昇・下降</li>
+                            <li>←→ または A/D: 左右移動</li>
+                            <li>スペース: ハシゴで救助/投下</li>
+                        </ul>
+                        <ul id="touchControls" style="display: none;">
+                            <li>画面をタッチ: アナログスティック表示</li>
+                            <li>スティック操作: ドローン移動</li>
+                            <li>短くタップ: ハシゴで救助/投下</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
             <div id="gameOverScreen" class="screen hidden">
@@ -209,6 +217,7 @@
     <script src="js/citizen.js"></script>
     <script src="js/stage.js"></script>
     <script src="js/tutorial.js"></script>
+    <script src="js/titleScreen.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>
