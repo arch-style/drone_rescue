@@ -4,7 +4,7 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         
         // バージョン情報
-        this.version = '0.0.23';
+        this.version = '0.0.24';
         
         // アップグレードシステム
         this.upgradeSystem = new UpgradeSystem();
@@ -214,7 +214,7 @@ class Game {
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             
-            if (this.state !== 'playing') return;
+            if (this.state !== 'playing' && this.state !== 'tutorial') return;
             
             // 複数タッチの処理
             for (let i = 0; i < e.changedTouches.length; i++) {
@@ -779,7 +779,12 @@ class Game {
                 // チュートリアル中でも基本的な更新は行う
                 if (this.drone) {
                     if (this.allowInput) {
-                        this.drone.update(deltaTime, this.keys);
+                        // タッチ操作の場合はアナログスティックの値を使用
+                        if (this.touchActive) {
+                            this.drone.updateWithAnalogStick(deltaTime, this.stickPosition);
+                        } else {
+                            this.drone.update(deltaTime, this.keys);
+                        }
                         
                         // チュートリアル中のハシゴ処理
                         if (this.keys[' '] && !this.drone.isRescuing) {
