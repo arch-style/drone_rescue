@@ -5,6 +5,9 @@ class Tutorial {
         this.isActive = false;
         this.completed = false;
         
+        // タッチデバイスかどうかを判定
+        this.isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        
         // チュートリアルステップの定義
         this.steps = [
             {
@@ -30,7 +33,9 @@ class Tutorial {
             {
                 id: 'controls_move',
                 title: 'ドローンの操作',
-                text: '矢印キーまたはWASDキーでドローンを移動できます。\\nスペースキーでハシゴを出し入れできます。\\n上下左右すべての方向に動かし、ハシゴも試してみましょう！',
+                text: this.isTouchDevice ? 
+                    '画面をタッチするとアナログスティックが表示されます。\nスティックでドローンを移動できます。\n短くタップするとハシゴを出し入れできます。\n上下左右すべての方向に動かし、タップも試してみましょう！' :
+                    '矢印キーまたはWASDキーでドローンを移動できます。\nスペースキーでハシゴを出し入れできます。\n上下左右すべての方向に動かし、ハシゴも試してみましょう！',
                 action: 'move',
                 highlight: 'drone',
                 position: 'top',
@@ -40,7 +45,7 @@ class Tutorial {
             {
                 id: 'battery',
                 title: 'バッテリー管理',
-                text: '画面上部のバーがバッテリー残量です。\\n時間や移動、救助操作で減少します。\\n収容人数が多いほど消費量が増加します。\\n0%になるとゲームオーバーです。',
+                text: '画面上部のバーがバッテリー残量です。\n時間や移動、救助操作で減少します。\n収容人数が多いほど消費量が増加します。\n0%になるとゲームオーバーです。',
                 action: null,
                 highlight: 'battery',
                 position: 'top',
@@ -50,7 +55,7 @@ class Tutorial {
             {
                 id: 'time_limit',
                 title: '残り時間',
-                text: '画面上部の「時間」が制限時間です。\\n時間内にすべての市民を救助しましょう！',
+                text: '画面上部の「時間」が制限時間です。\n時間内にすべての市民を救助しましょう！',
                 action: null,
                 highlight: 'time',
                 position: 'top',
@@ -60,7 +65,7 @@ class Tutorial {
             {
                 id: 'find_citizen',
                 title: '市民を見つけよう',
-                text: '建物の近くにいる市民を探しましょう。\\n市民の近くまで移動してください。',
+                text: '建物の近くにいる市民を探しましょう。\n市民の近くまで移動してください。',
                 action: 'findCitizen',
                 highlight: 'citizen',
                 position: 'bottom',
@@ -70,7 +75,9 @@ class Tutorial {
             {
                 id: 'rescue',
                 title: '市民を救助',
-                text: 'スペースキーを押してハシゴを降ろし、市民を救助しましょう！',
+                text: this.isTouchDevice ?
+                    '短くタップしてハシゴを降ろし、市民を救助しましょう！' :
+                    'スペースキーを押してハシゴを降ろし、市民を救助しましょう！',
                 action: 'rescue',
                 highlight: 'citizen',
                 position: 'bottom',
@@ -90,7 +97,9 @@ class Tutorial {
             {
                 id: 'deliver',
                 title: '市民を降ろす',
-                text: '基地の上でスペースキーを押して、市民を安全に降ろしましょう。',
+                text: this.isTouchDevice ?
+                    '基地の上で短くタップして、市民を安全に降ろしましょう。' :
+                    '基地の上でスペースキーを押して、市民を安全に降ろしましょう。',
                 action: 'deliver',
                 highlight: 'base',
                 position: 'top',
@@ -100,7 +109,7 @@ class Tutorial {
             {
                 id: 'charging_intro',
                 title: '充電ポート',
-                text: '青い建物は充電ポートです。\\n接触するとバッテリーが回復します。\\n実際に充電ポートまで移動してみましょう！',
+                text: '青い建物は充電ポートです。\n接触するとバッテリーが回復します。\n実際に充電ポートまで移動してみましょう！',
                 action: 'showCharging',
                 highlight: 'chargingPort',
                 position: 'center',
@@ -110,7 +119,7 @@ class Tutorial {
             {
                 id: 'charging_action',
                 title: 'バッテリー充電',
-                text: '充電ポートに接触してバッテリーを回復させましょう！\\n地面近くまで降りてください。',
+                text: '充電ポートに接触してバッテリーを回復させましょう！\n地面近くまで降りてください。',
                 action: 'charge',
                 highlight: 'chargingPort',
                 position: 'center',
@@ -120,7 +129,7 @@ class Tutorial {
             {
                 id: 'stage_clear',
                 title: 'ステージクリア',
-                text: 'すべての市民を救助するとステージクリアです！\\nクリアするとパワーアップを選択できます。',
+                text: 'すべての市民を救助するとステージクリアです！\nクリアするとパワーアップを選択できます。',
                 action: null,
                 highlight: null,
                 position: 'center',
@@ -130,7 +139,7 @@ class Tutorial {
             {
                 id: 'powerups',
                 title: 'パワーアップ',
-                text: 'バッテリー容量、速度、充電効率など\\n様々な強化を選択できます。',
+                text: 'バッテリー容量、速度、充電効率など\n様々な強化を選択できます。',
                 action: null,
                 highlight: null,
                 position: 'center',
@@ -140,7 +149,7 @@ class Tutorial {
             {
                 id: 'complete',
                 title: 'チュートリアル完了！',
-                text: '準備ができました！\\n実際のゲームを始めましょう。',
+                text: '準備ができました！\n実際のゲームを始めましょう。',
                 action: null,
                 highlight: null,
                 position: 'center',
@@ -364,13 +373,13 @@ class Tutorial {
             if (!this.moveDetected.down) remaining.push('↓下');
             if (!this.moveDetected.left) remaining.push('←左');
             if (!this.moveDetected.right) remaining.push('→右');
-            if (!this.ladderUsed) remaining.push('スペース(ハシゴ)');
+            if (!this.ladderUsed) remaining.push(this.isTouchDevice ? 'タップ(ハシゴ)' : 'スペース(ハシゴ)');
             
             let progressText = step.text;
             if (remaining.length > 0) {
-                progressText += `\\n\\n残り: ${remaining.join(', ')}`;
+                progressText += `\n\n残り: ${remaining.join(', ')}`;
             } else {
-                progressText += '\\n\\n✅ すべての操作完了！\\n1秒後に次へ進みます...';
+                progressText += '\n\n✅ すべての操作完了！\n1秒後に次へ進みます...';
             }
             this.textElement.textContent = progressText;
         } else {
@@ -596,6 +605,30 @@ class Tutorial {
                     this.moveDetected.right = true;
                 }
                 if (this.game.keys[' ']) {
+                    this.ladderUsed = true;
+                }
+                
+                // タッチ操作の検出
+                if (this.isTouchDevice && this.game.touchActive) {
+                    // スティック操作を検出
+                    if (Math.abs(this.game.stickPosition.x) > 0.3) {
+                        if (this.game.stickPosition.x > 0) {
+                            this.moveDetected.right = true;
+                        } else {
+                            this.moveDetected.left = true;
+                        }
+                    }
+                    if (Math.abs(this.game.stickPosition.y) > 0.3) {
+                        if (this.game.stickPosition.y > 0) {
+                            this.moveDetected.down = true;
+                        } else {
+                            this.moveDetected.up = true;
+                        }
+                    }
+                }
+                
+                // タップによるハシゴ操作の検出
+                if (this.isTouchDevice && this.game.drone && this.game.drone.isRescuing) {
                     this.ladderUsed = true;
                 }
                 
