@@ -4,7 +4,7 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         
         // バージョン情報
-        this.version = '0.0.22';
+        this.version = '0.0.23';
         
         // アップグレードシステム
         this.upgradeSystem = new UpgradeSystem();
@@ -33,6 +33,10 @@ class Game {
         this.setupMobileOptimizations();
         
         // スクロール関連
+        // チュートリアル
+        this.tutorial = null;
+        this.allowInput = true;
+        
         this.camera = {
             x: 0,
             y: 0
@@ -40,7 +44,7 @@ class Game {
         this.worldWidth = 1600; // ベースのワールド横幅
         
         // ゲーム状態
-        this.state = 'menu'; // menu, playing, gameover, failed
+        this.state = 'menu'; // menu, playing, gameover, failed, tutorial
         this.score = 0;
         this.rescuedCount = 0;
         this.time = 0;
@@ -69,6 +73,9 @@ class Game {
         this.keys = {};
         this.setupInput();
         
+        // rescue action用の処理を追加
+        this.handleRescueAction = this.handleRescueAction.bind(this);
+        
         // UI要素
         this.startScreen = document.getElementById('startScreen');
         this.gameOverScreen = document.getElementById('gameOverScreen');
@@ -85,6 +92,10 @@ class Game {
         document.getElementById('startButton').addEventListener('click', () => {
             this.soundManager.play('click');
             this.startGame();
+        });
+        document.getElementById('tutorialButton').addEventListener('click', () => {
+            this.soundManager.play('click');
+            this.startTutorial();
         });
         // restartButtonは削除されたためコメントアウト
         // document.getElementById('restartButton').addEventListener('click', () => {
@@ -353,6 +364,19 @@ class Game {
         
         // ゲームオブジェクト初期化
         this.initializeGame();
+    }
+    
+    startTutorial() {
+        this.state = 'tutorial';
+        this.startScreen.classList.add('hidden');
+        
+        // チュートリアルインスタンスを作成して開始
+        this.tutorial = new Tutorial(this);
+        this.tutorial.start();
+        
+        // BGMを開始
+        this.soundManager.resetBGM();
+        this.soundManager.playBGM();
     }
     
     initializeGame() {
@@ -747,6 +771,86 @@ class Game {
     }
     
     update(deltaTime) {
+        if (this.state === 'tutorial') {
+            // チュートリアル中の更新
+            if (this.tutorial) {
+                this.tutorial.update();
+                
+                // チュートリアル中でも基本的な更新は行う
+                if (this.drone) {
+                    if (this.allowInput) {
+                        this.drone.update(deltaTime, this.keys);
+                        
+                        // チュートリアル中のハシゴ処理
+                        if (this.keys[' '] && !this.drone.isRescuing) {
+                            this.handleRescueAction();
+                        }
+                        
+                        // チュートリアル中の充電判定
+                        if (!this.stage.chargingPort.used) {
+                            const port = this.stage.chargingPort;
+                            const distanceToPort = Math.sqrt(
+                                Math.pow(this.drone.x - port.x, 2) + 
+                                Math.pow(this.drone.y - (port.y - port.height/2), 2)
+                            );
+                            
+                            if (distanceToPort < 40 && this.drone.isNearGround()) {
+                                this.drone.battery = Math.min(100, this.drone.battery + port.chargeAmount);
+                                port.used = true;
+                                this.soundManager.play('charge');
+                            }
+                        }
+                        
+                        // チュートリアル中のハシゴ処理
+                        if (this.drone.isRescuing) {
+                            this.drone.ladderTimer -= deltaTime;
+                            
+                            if (this.drone.ladderTimer <= 0) {
+                                this.drone.isRescuing = false;
+                                this.drone.ropeLength = 0;
+                            } else {
+                                const ropeSpeed = 200; // チュートリアル用に高速化
+                                if (this.drone.ropeLength < this.drone.maxRopeLength) {
+                                    this.drone.ropeLength += ropeSpeed * deltaTime;
+                                }
+                                
+                                // 救助判定
+                                if (this.drone.passengers.length < this.drone.maxCapacity) {
+                                    this.citizens.forEach(citizen => {
+                                        if (!citizen.rescued && !citizen.delivered) {
+                                            const ladderTopY = this.drone.y + this.drone.height/2;
+                                            const ladderBottomY = ladderTopY + this.drone.ropeLength;
+                                            const horizontalInRange = Math.abs(citizen.x - this.drone.x) < 30; // 範囲を広げる
+                                            const verticalInRange = citizen.y >= ladderTopY - 20 && citizen.y <= ladderBottomY + 20; // 範囲を広げる
+                                            
+                                            if (horizontalInRange && verticalInRange) {
+                                                this.rescueCitizen(citizen);
+                                            }
+                                        }
+                                    });
+                                }
+                                
+                                // 基地での投下判定
+                                if (this.isAboveBase() && this.drone.passengers.length > 0) {
+                                    const ropeEndY = this.drone.y + this.drone.height/2 + this.drone.ropeLength;
+                                    if (ropeEndY >= this.stage.groundLevel - 20) { // 判定を緩くする
+                                        this.dropOffPassengers();
+                                        this.drone.isRescuing = false;
+                                        this.drone.ropeLength = 0;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // カメラ更新
+                    this.camera.x = this.drone.x - this.width / 2;
+                    this.camera.x = Math.max(0, Math.min(this.worldWidth - this.width, this.camera.x));
+                }
+            }
+            return;
+        }
+        
         if (this.state !== 'playing' && this.state !== 'paused') return;
         
         // pausedの場合は更新を停止
@@ -1051,10 +1155,14 @@ class Game {
         this.ctx.restore();
         
         // 画面外の救助者表示（カメラ変換外）
-        this.renderOffscreenIndicators();
+        if (this.state === 'playing' || this.state === 'tutorial') {
+            this.renderOffscreenIndicators();
+        }
         
         // ホームポイント上空でのサイン表示
-        this.renderDropOffSign();
+        if (this.state === 'playing') {
+            this.renderDropOffSign();
+        }
         
         // プレゼントメッセージ表示
         this.renderPresentMessages();

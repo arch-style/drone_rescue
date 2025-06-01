@@ -243,25 +243,61 @@ class Drone {
         
         // 縄梯子（救助中かつゲームプレイ中の場合のみ）
         if (this.isRescuing && this.ropeLength > 0 && this.battery > 0) {
-            // 縄梯子の横紐
-            ctx.strokeStyle = '#8B4513';
-            ctx.lineWidth = 2;
+            // ハシゴの背景光（目立たせるため）
+            ctx.save();
+            ctx.shadowColor = '#FFD700';
+            ctx.shadowBlur = 8;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+            
+            // 縄梯子の横紐（太くして目立たせる）
+            ctx.strokeStyle = '#FF6B00';
+            ctx.lineWidth = 4;
             ctx.beginPath();
-            ctx.moveTo(-5, this.height/2);
-            ctx.lineTo(-5, this.height/2 + this.ropeLength);
-            ctx.moveTo(5, this.height/2);
-            ctx.lineTo(5, this.height/2 + this.ropeLength);
+            ctx.moveTo(-8, this.height/2);
+            ctx.lineTo(-8, this.height/2 + this.ropeLength);
+            ctx.moveTo(8, this.height/2);
+            ctx.lineTo(8, this.height/2 + this.ropeLength);
             ctx.stroke();
             
-            // 縄梯子の横棒
+            // 縄梯子の横棒（太くして目立たせる）
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 3;
             const rungs = Math.floor(this.ropeLength / 15);
             for (let i = 1; i <= rungs; i++) {
                 const y = this.height/2 + i * 15;
                 ctx.beginPath();
-                ctx.moveTo(-5, y);
-                ctx.lineTo(5, y);
+                ctx.moveTo(-8, y);
+                ctx.lineTo(8, y);
                 ctx.stroke();
             }
+            
+            // ハシゴの端の強調（先端を目立たせる）
+            if (this.ropeLength > 5) {
+                ctx.fillStyle = '#FF0000';
+                ctx.beginPath();
+                ctx.arc(0, this.height/2 + this.ropeLength, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            ctx.restore();
+            
+            // アニメーション効果（ハシゴが揺れる）
+            const swayAmount = Math.sin(Date.now() * 0.005) * 2;
+            ctx.save();
+            ctx.translate(swayAmount, 0);
+            
+            // 縄梯子の内側のライン（立体感を出す）
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(-6, this.height/2);
+            ctx.lineTo(-6, this.height/2 + this.ropeLength);
+            ctx.moveTo(6, this.height/2);
+            ctx.lineTo(6, this.height/2 + this.ropeLength);
+            ctx.stroke();
+            
+            ctx.restore();
         }
         
         // 収容人数がMAXの場合、ドローンを赤く表示
